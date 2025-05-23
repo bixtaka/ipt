@@ -59,7 +59,6 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   int? _selectedRow;
   int? _selectedColumn;
 
-  @override
   void main() {
     final now = DateTime.now();
     final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
@@ -67,6 +66,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     print(formatted); // 例: 2025-05-23 18:30:00
   }
 
+  @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
@@ -267,6 +267,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   }
 
   Widget _buildMeasurementTableView() {
+    final screenHeight = MediaQuery.of(context).size.height;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -295,97 +296,107 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
             ],
           ),
           const SizedBox(height: 12),
+
+          // ヘッダー行（横スクロールのみ）
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Column(
-              children: [
-                Row(
-                  children: columnTitles.map((title) {
-                    return Container(
-                      width: 80,
-                      padding: const EdgeInsets.all(8),
-                      alignment: Alignment.center,
-                      child: Text(title,
-                          style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: Row(
+              children: columnTitles.map((title) {
+                return Container(
+                  width: 80,
+                  padding: const EdgeInsets.all(8),
+                  alignment: Alignment.center,
+                  child: Text(title,
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                );
+              }).toList(),
+            ),
+          ),
+
+          SizedBox(
+            height: screenHeight * 0.5, // 画面高さの50%に設定
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Column(
+                  children: List.generate(_controllers.length, (rowIndex) {
+                    return Row(
+                      children: List.generate(columnTitles.length, (colIndex) {
+                        final isSelected = _selectedRow == rowIndex &&
+                            _selectedColumn == colIndex;
+                        final controller = _controllers[rowIndex][colIndex];
+                        return GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              _selectedRow = rowIndex;
+                              _selectedColumn = colIndex;
+                            });
+                          },
+                          child: Container(
+                            width: 80,
+                            margin: const EdgeInsets.all(2),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              border: colIndex == 0
+                                  ? null
+                                  : Border.all(color: Colors.grey),
+                              color: colIndex == 0
+                                  ? Theme.of(context).scaffoldBackgroundColor
+                                  : isSelected
+                                      ? Colors.lightBlueAccent.withOpacity(0.3)
+                                      : Colors.white,
+                            ),
+                            child: TextField(
+                              controller: controller,
+                              readOnly: [0, 3, 6, 7, 10].contains(colIndex),
+                              textAlign: colIndex == 0
+                                  ? TextAlign.right
+                                  : TextAlign.center,
+                              decoration: const InputDecoration(
+                                  border: InputBorder.none),
+                              keyboardType: TextInputType.numberWithOptions(
+                                  decimal: true, signed: false),
+                              onTap: () {
+                                setState(() {
+                                  _selectedRow = rowIndex;
+                                  _selectedColumn = colIndex;
+                                });
+                              },
+                              onChanged: (_) {
+                                // 🟨 最終行に入力があれば、新しい行を追加
+                                if (rowIndex == _controllers.length - 1) {
+                                  setState(() {
+                                    _controllers.add(
+                                      List.generate(columnTitles.length,
+                                          (_) => TextEditingController()),
+                                    );
+                                  });
+                                }
+
+                                // パス数を自動設定
+                                if (colIndex == 1) {
+                                  setState(() {
+                                    _controllers[rowIndex][0].text =
+                                        (rowIndex + 1).toString();
+                                  });
+                                }
+
+                                if (colIndex == 10) {
+                                  _calculateHeatInputAt(rowIndex);
+                                }
+
+                                _updateCalculatedFields();
+                              },
+                            ),
+                          ),
+                        );
+                      }),
                     );
-                  }).toList(),
+                  }),
                 ),
-                ...List.generate(_controllers.length, (rowIndex) {
-                  return Row(
-                    children: List.generate(columnTitles.length, (colIndex) {
-                      final isSelected = _selectedRow == rowIndex &&
-                          _selectedColumn == colIndex;
-                      final controller = _controllers[rowIndex][colIndex];
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          setState(() {
-                            _selectedRow = rowIndex;
-                            _selectedColumn = colIndex;
-                          });
-                        },
-                        child: Container(
-                          width: 80,
-                          margin: const EdgeInsets.all(2),
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            border: colIndex == 0
-                                ? null
-                                : Border.all(color: Colors.grey),
-                            color: colIndex == 0
-                                ? Theme.of(context).scaffoldBackgroundColor
-                                : isSelected
-                                    ? Colors.lightBlueAccent.withOpacity(0.3)
-                                    : Colors.white,
-                          ),
-                          child: TextField(
-                            controller: controller,
-                            readOnly: [0, 3, 6, 7, 10].contains(colIndex),
-                            textAlign: colIndex == 0
-                                ? TextAlign.right
-                                : TextAlign.center,
-                            decoration:
-                                const InputDecoration(border: InputBorder.none),
-                            keyboardType: TextInputType.numberWithOptions(
-                                decimal: true, signed: false),
-                            onTap: () {
-                              setState(() {
-                                _selectedRow = rowIndex;
-                                _selectedColumn = colIndex;
-                              });
-                            },
-                            onChanged: (_) {
-                              // 🟨 最終行に入力があれば、新しい行を追加
-                              if (rowIndex == _controllers.length - 1) {
-                                setState(() {
-                                  _controllers.add(
-                                    List.generate(columnTitles.length,
-                                        (_) => TextEditingController()),
-                                  );
-                                });
-                              }
-
-                              // パス数を自動設定
-                              if (colIndex == 1) {
-                                setState(() {
-                                  _controllers[rowIndex][0].text =
-                                      (rowIndex + 1).toString();
-                                });
-                              }
-
-                              if (colIndex == 10) {
-                                _calculateHeatInputAt(rowIndex);
-                              }
-
-                              _updateCalculatedFields();
-                            },
-                          ),
-                        ),
-                      );
-                    }),
-                  );
-                }),
-              ],
+              ),
             ),
           ),
           const SizedBox(height: 20),
