@@ -20,7 +20,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     '測定日',
     '製品符号',
     '位置',
-    '部材',　
+    '部材',
     '材質',
     '開先角度',
     'ルート間隔',
@@ -60,6 +60,13 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   int? _selectedColumn;
 
   @override
+  void main() {
+    final now = DateTime.now();
+    final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+    final formatted = formatter.format(now);
+    print(formatted); // 例: 2025-05-23 18:30:00
+  }
+
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
