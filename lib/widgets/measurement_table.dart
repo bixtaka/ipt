@@ -58,6 +58,9 @@ class MeasurementTable extends StatelessWidget {
                 child: TextField(
                   controller: controllers[row][col],
                   textAlign: TextAlign.center,
+                  keyboardType: col == (columnTitles.length - 1) // 備考列だけ通常
+                      ? TextInputType.text
+                      : TextInputType.number,
                   decoration: const InputDecoration(
                     isDense: true,
                     contentPadding:
