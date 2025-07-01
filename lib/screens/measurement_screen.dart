@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import '../widgets/info_form.dart';
 import 'package:flutter/scheduler.dart';
 import '../services/excel_exporter.dart';
+import '../widgets/stopwatch_controls.dart';
+import '../widgets/measurement_table.dart';
 
 class MeasurementTabbedScreen extends StatefulWidget {
   const MeasurementTabbedScreen({super.key});
@@ -131,74 +133,71 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
   // 必要に応じてロジックを追加
   void _updateCalculatedFields() {
-    setState(() {
-      for (int row = 0; row < initialRowCount; row++) {
-        final startText = _controllers[row][8].text; // 作業開始
-        final endText = _controllers[row][9].text; // 作業終了
+    // 計算処理はsetState外で実施
+    for (int row = 0; row < initialRowCount; row++) {
+      final startText = _controllers[row][8].text;
+      final endText = _controllers[row][9].text;
 
-        if (startText.isEmpty || endText.isEmpty) {
-          _controllers[row][7].text = ''; // 溶接時間
-          _controllers[row][6].text = ''; // 速度
-          _controllers[row][10].text = ''; // インターバル
-          continue;
-        }
+      if (startText.isEmpty || endText.isEmpty) {
+        _controllers[row][7].text = '';
+        _controllers[row][6].text = '';
+        _controllers[row][10].text = '';
+        continue;
+      }
 
-        int toSeconds(String timeText) {
-          final parts = timeText.split(':');
-          if (parts.length != 2) return 0;
-          final minutes = int.tryParse(parts[0]) ?? 0;
-          final seconds = int.tryParse(parts[1]) ?? 0;
-          return minutes * 60 + seconds;
-        }
+      int toSeconds(String timeText) {
+        final parts = timeText.split(':');
+        if (parts.length != 2) return 0;
+        final minutes = int.tryParse(parts[0]) ?? 0;
+        final seconds = int.tryParse(parts[1]) ?? 0;
+        return minutes * 60 + seconds;
+      }
 
-        int startSec = toSeconds(startText);
-        int endSec = toSeconds(endText);
-        int weldingTime = endSec - startSec;
+      int startSec = toSeconds(startText);
+      int endSec = toSeconds(endText);
+      int weldingTime = endSec - startSec;
 
-        if (weldingTime <= 0) {
-          _controllers[row][7].text = '';
-          _controllers[row][6].text = '';
-          _controllers[row][10].text = '';
-          continue;
-        }
+      if (weldingTime <= 0) {
+        _controllers[row][7].text = '';
+        _controllers[row][6].text = '';
+        _controllers[row][10].text = '';
+        continue;
+      }
 
-        String formatTime(int totalSec) {
-          final m = (totalSec ~/ 60).toString().padLeft(2, '0');
-          final s = (totalSec % 60).toString().padLeft(2, '0');
-          return '$m:$s';
-        }
+      String formatTime(int totalSec) {
+        final m = (totalSec ~/ 60).toString().padLeft(2, '0');
+        final s = (totalSec % 60).toString().padLeft(2, '0');
+        return '$m:$s';
+      }
 
-        _controllers[row][7].text = formatTime(weldingTime);
+      _controllers[row][7].text = formatTime(weldingTime);
 
-        // 速度計算（溶接長 ÷ 溶接時間（分））
-        double weldingLength = double.tryParse(_infoControllers[10].text) ?? 0;
-        if (weldingLength > 0) {
-          double speedValue = weldingLength / (weldingTime / 60);
-          _controllers[row][6].text = speedValue.toStringAsFixed(2);
-        } else {
-          _controllers[row][6].text = '';
-        }
+      double weldingLength = double.tryParse(_infoControllers[10].text) ?? 0;
+      if (weldingLength > 0) {
+        double speedValue = weldingLength / (weldingTime / 60);
+        _controllers[row][6].text = speedValue.toStringAsFixed(2);
+      } else {
+        _controllers[row][6].text = '';
+      }
 
-        // インターバル計算は次の行の開始時間 - 今の行の終了時間
-        if (row < _controllers.length - 1) {
-          final nextStartText = _controllers[row + 1][8].text;
-          if (nextStartText.isNotEmpty) {
-            int nextStartSec = toSeconds(nextStartText);
-            int intervalSec = nextStartSec - endSec;
-            if (intervalSec > 0) {
-              _controllers[row][10].text = formatTime(intervalSec);
-            } else {
-              _controllers[row][10].text = '';
-            }
+      if (row < _controllers.length - 1) {
+        final nextStartText = _controllers[row + 1][8].text;
+        if (nextStartText.isNotEmpty) {
+          int nextStartSec = toSeconds(nextStartText);
+          int intervalSec = nextStartSec - endSec;
+          if (intervalSec > 0) {
+            _controllers[row][10].text = formatTime(intervalSec);
           } else {
             _controllers[row][10].text = '';
           }
         } else {
-          // 最終行はインターバル空欄
           _controllers[row][10].text = '';
         }
+      } else {
+        _controllers[row][10].text = '';
       }
-    });
+    }
+    setState(() {}); // 1回だけ
   }
 
   Duration? _parseDuration(String text) {
@@ -266,137 +265,51 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     }
   }
 
-  Widget _buildMeasurementTableView() {
-    final screenHeight = MediaQuery.of(context).size.height;
-    return SingleChildScrollView(
+  Widget _buildMeasurementTableViewWidget() {
+    return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           const SizedBox(height: 12),
-          Text('⏱ $_displayTime', style: const TextStyle(fontSize: 24)),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton(
-                  onPressed: _startStopwatch, child: const Text('Start')),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                  onPressed: _stopStopwatch, child: const Text('Stop')),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                  onPressed: _resetStopwatch, child: const Text('Reset')),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                  onPressed: _fillSelectedCellWithTime,
-                  child: const Text('記録')),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                  onPressed: () => _calculateHeatInputAt(_selectedRow ?? 0),
-                  child: const Text('入熱')),
-            ],
+          StopwatchControls(
+            displayTime: _displayTime,
+            onStart: _startStopwatch,
+            onStop: _stopStopwatch,
+            onReset: _resetStopwatch,
+            onRecord: _fillSelectedCellWithTime,
+            onCalculateHeat: () => _calculateHeatInputAt(_selectedRow ?? 0),
           ),
           const SizedBox(height: 12),
+          Expanded(
+            child: MeasurementTable(
+              controllers: _controllers,
+              columnTitles: columnTitles,
+              selectedRow: _selectedRow,
+              selectedColumn: _selectedColumn,
+              onCellTap: (row, col) {
+                setState(() {
+                  _selectedRow = row;
+                  _selectedColumn = col;
+                });
+              },
+              onCellChanged: (row, col, _) {
+                if (row == _controllers.length - 1) {
+                  setState(() {
+                    _controllers.add(List.generate(
+                        columnTitles.length, (_) => TextEditingController()));
+                  });
+                }
 
-          // ヘッダー行（横スクロールのみ）
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: columnTitles.map((title) {
-                return Container(
-                  width: 80,
-                  padding: const EdgeInsets.all(8),
-                  alignment: Alignment.center,
-                  child: Text(title,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                );
-              }).toList(),
-            ),
-          ),
+                if (col == 1) {
+                  _controllers[row][0].text = (row + 1).toString();
+                }
 
-          SizedBox(
-            height: screenHeight * 0.5, // 画面高さの50%に設定
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Column(
-                  children: List.generate(_controllers.length, (rowIndex) {
-                    return Row(
-                      children: List.generate(columnTitles.length, (colIndex) {
-                        final isSelected = _selectedRow == rowIndex &&
-                            _selectedColumn == colIndex;
-                        final controller = _controllers[rowIndex][colIndex];
-                        return GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            setState(() {
-                              _selectedRow = rowIndex;
-                              _selectedColumn = colIndex;
-                            });
-                          },
-                          child: Container(
-                            width: 80,
-                            margin: const EdgeInsets.all(2),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              border: colIndex == 0
-                                  ? null
-                                  : Border.all(color: Colors.grey),
-                              color: colIndex == 0
-                                  ? Theme.of(context).scaffoldBackgroundColor
-                                  : isSelected
-                                      ? Colors.lightBlueAccent.withOpacity(0.3)
-                                      : Colors.white,
-                            ),
-                            child: TextField(
-                              controller: controller,
-                              readOnly: [0, 3, 6, 7, 10].contains(colIndex),
-                              textAlign: colIndex == 0
-                                  ? TextAlign.right
-                                  : TextAlign.center,
-                              decoration: const InputDecoration(
-                                  border: InputBorder.none),
-                              keyboardType: TextInputType.numberWithOptions(
-                                  decimal: true, signed: false),
-                              onTap: () {
-                                setState(() {
-                                  _selectedRow = rowIndex;
-                                  _selectedColumn = colIndex;
-                                });
-                              },
-                              onChanged: (_) {
-                                // 🟨 最終行に入力があれば、新しい行を追加
-                                if (rowIndex == _controllers.length - 1) {
-                                  setState(() {
-                                    _controllers.add(
-                                      List.generate(columnTitles.length,
-                                          (_) => TextEditingController()),
-                                    );
-                                  });
-                                }
+                if (col == 10) {
+                  _calculateHeatInputAt(row);
+                }
 
-                                // パス数を自動設定
-                                if (colIndex == 1) {
-                                  setState(() {
-                                    _controllers[rowIndex][0].text =
-                                        (rowIndex + 1).toString();
-                                  });
-                                }
-
-                                if (colIndex == 10) {
-                                  _calculateHeatInputAt(rowIndex);
-                                }
-
-                                _updateCalculatedFields();
-                              },
-                            ),
-                          ),
-                        );
-                      }),
-                    );
-                  }),
-                ),
-              ),
+                _updateCalculatedFields();
+              },
             ),
           ),
           const SizedBox(height: 20),
@@ -424,32 +337,152 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isWide = MediaQuery.of(context).size.width > 900; // iPad横ならtrue
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('測定データ入力'),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: '情報入力'),
-            Tab(text: '測定値入力'),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          InfoForm(
-            infoLabels: infoLabels,
-            controllers: _infoControllers,
-            onChanged: (index) {
-              _updateCalculatedFields();
-              if (index == 11) {
-                _calculateHeatInputAt(_selectedRow ?? 0);
-              }
-            },
-          ),
-          _buildMeasurementTableView(),
-        ],
+      drawer: isWide
+          ? null
+          : Drawer(
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: InfoForm(
+                    infoLabels: infoLabels,
+                    controllers: _infoControllers,
+                    onChanged: (index) {
+                      _updateCalculatedFields();
+                      if (index == 11) {
+                        _calculateHeatInputAt(_selectedRow ?? 0);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: isWide
+            ? Row(
+                children: [
+                  SizedBox(
+                    width: 320,
+                    child: InfoForm(
+                      infoLabels: infoLabels,
+                      controllers: _infoControllers,
+                      onChanged: (index) {
+                        _updateCalculatedFields();
+                        if (index == 11) {
+                          _calculateHeatInputAt(_selectedRow ?? 0);
+                        }
+                      },
+                    ),
+                  ),
+                  const VerticalDivider(width: 24),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        StopwatchControls(
+                          displayTime: _displayTime,
+                          onStart: _startStopwatch,
+                          onStop: _stopStopwatch,
+                          onReset: _resetStopwatch,
+                          onRecord: _fillSelectedCellWithTime,
+                          onCalculateHeat: () =>
+                              _calculateHeatInputAt(_selectedRow ?? 0),
+                        ),
+                        const SizedBox(height: 12),
+                        Expanded(
+                          child: MeasurementTable(
+                            controllers: _controllers,
+                            columnTitles: columnTitles,
+                            selectedRow: _selectedRow,
+                            selectedColumn: _selectedColumn,
+                            onCellTap: (row, col) {
+                              setState(() {
+                                _selectedRow = row;
+                                _selectedColumn = col;
+                              });
+                            },
+                            onCellChanged: (row, col, _) {
+                              if (row == _controllers.length - 1) {
+                                setState(() {
+                                  _controllers.add(List.generate(
+                                      columnTitles.length,
+                                      (_) => TextEditingController()));
+                                });
+                              }
+                              if (col == 1) {
+                                _controllers[row][0].text =
+                                    (row + 1).toString();
+                              }
+                              if (col == 10) {
+                                _calculateHeatInputAt(row);
+                              }
+                              _updateCalculatedFields();
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: _downloadExcel,
+                          child: const Text('Excel出力'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : Column(
+                children: [
+                  StopwatchControls(
+                    displayTime: _displayTime,
+                    onStart: _startStopwatch,
+                    onStop: _stopStopwatch,
+                    onReset: _resetStopwatch,
+                    onRecord: _fillSelectedCellWithTime,
+                    onCalculateHeat: () =>
+                        _calculateHeatInputAt(_selectedRow ?? 0),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: MeasurementTable(
+                      controllers: _controllers,
+                      columnTitles: columnTitles,
+                      selectedRow: _selectedRow,
+                      selectedColumn: _selectedColumn,
+                      onCellTap: (row, col) {
+                        setState(() {
+                          _selectedRow = row;
+                          _selectedColumn = col;
+                        });
+                      },
+                      onCellChanged: (row, col, _) {
+                        if (row == _controllers.length - 1) {
+                          setState(() {
+                            _controllers.add(List.generate(columnTitles.length,
+                                (_) => TextEditingController()));
+                          });
+                        }
+                        if (col == 1) {
+                          _controllers[row][0].text = (row + 1).toString();
+                        }
+                        if (col == 10) {
+                          _calculateHeatInputAt(row);
+                        }
+                        _updateCalculatedFields();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _downloadExcel,
+                    child: const Text('Excel出力'),
+                  ),
+                ],
+              ),
       ),
     );
   }
