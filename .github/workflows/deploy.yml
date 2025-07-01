@@ -16,7 +16,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.5'   # ← ここ変更
+          flutter-version: '3.22.2'   # ← ここ変更
           architecture: x64
 
       - name: Install dependencies
