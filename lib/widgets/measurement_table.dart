@@ -21,67 +21,63 @@ class MeasurementTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // ヘッダー
-        Container(
-          color: Colors.grey[200],
-          child: Row(
-            children: List.generate(
-              columnTitles.length,
-              (col) => Expanded(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: Text(
-                    columnTitles[col],
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                    textAlign: TextAlign.center,
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: NeverScrollableScrollPhysics(), // 親でスクロールする場合
+      itemCount: controllers.length + 1, // +1 for header
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          // ヘッダー
+          return Container(
+            color: Colors.grey[200],
+            child: Row(
+              children: List.generate(
+                columnTitles.length,
+                (col) => Expanded(
+                  child: Padding(
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Text(
+                      columnTitles[col],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }
+        final row = index - 1;
+        return Row(
+          children: List.generate(
+            columnTitles.length,
+            (col) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                child: TextField(
+                  controller: controllers[row][col],
+                  textAlign: TextAlign.center,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    border: InputBorder.none,
+                  ),
+                  onTap: () => onCellTap(row, col),
+                  onChanged: (value) => onCellChanged(row, col, value),
+                  style: TextStyle(
+                    backgroundColor:
+                        (selectedRow == row && selectedColumn == col)
+                            ? Colors.blue.withOpacity(0.1)
+                            : null,
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        const Divider(height: 1),
-        // データ行（高さを固定 → 可変に変更）
-        Expanded(
-          child: ListView.builder(
-            itemCount: controllers.length,
-            itemBuilder: (context, row) {
-              return Row(
-                children: List.generate(
-                  columnTitles.length,
-                  (col) => Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 4, horizontal: 2),
-                      child: TextField(
-                        controller: controllers[row][col],
-                        textAlign: TextAlign.center,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          contentPadding:
-                              EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                          border: InputBorder.none,
-                        ),
-                        onTap: () => onCellTap(row, col),
-                        onChanged: (value) => onCellChanged(row, col, value),
-                        style: TextStyle(
-                          backgroundColor:
-                              (selectedRow == row && selectedColumn == col)
-                                  ? Colors.blue.withOpacity(0.1)
-                                  : null,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

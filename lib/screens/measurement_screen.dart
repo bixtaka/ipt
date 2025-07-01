@@ -435,20 +435,21 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                   ),
                 ],
               )
-            : Column(
-                children: [
-                  StopwatchControls(
-                    displayTime: _displayTime,
-                    onStart: _startStopwatch,
-                    onStop: _stopStopwatch,
-                    onReset: _resetStopwatch,
-                    onRecord: _fillSelectedCellWithTime,
-                    onCalculateHeat: () =>
-                        _calculateHeatInputAt(_selectedRow ?? 0),
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: MeasurementTable(
+            : SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    StopwatchControls(
+                      displayTime: _displayTime,
+                      onStart: _startStopwatch,
+                      onStop: _stopStopwatch,
+                      onReset: _resetStopwatch,
+                      onRecord: _fillSelectedCellWithTime,
+                      onCalculateHeat: () =>
+                          _calculateHeatInputAt(_selectedRow ?? 0),
+                    ),
+                    const SizedBox(height: 12),
+                    MeasurementTable(
                       controllers: _controllers,
                       columnTitles: columnTitles,
                       selectedRow: _selectedRow,
@@ -475,13 +476,13 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                         _updateCalculatedFields();
                       },
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _downloadExcel,
-                    child: const Text('Excel出力'),
-                  ),
-                ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _downloadExcel,
+                      child: const Text('Excel出力'),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
