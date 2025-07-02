@@ -99,7 +99,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
       _controllers[row][3].text = (row % 2 == 0) ? '12.34' : '15.67'; // 入熱
       _controllers[row][4].text = '120'; // 電流
       _controllers[row][5].text = '24'; // 電圧
-      _controllers[row][6].text = '10'; // 速度
+      _
       _controllers[row][7].text = '01:30'; // 溶接時間
       _controllers[row][8].text = '08:00'; // 作業開始
       _controllers[row][9].text = '08:10'; // 作業終了
@@ -430,45 +430,12 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
       ),
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 画面幅が600未満ならドロワー、それ以上ならサイドバー
-        if (constraints.maxWidth < 600) {
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('測定データ'),
-            ),
-            drawer: infoDrawer,
-            body: _buildMeasurementTableViewWidget(), // ← Stackをやめて直接表示
-          );
-        } else {
-          return Scaffold(
-            //backgroundColor: const Color(0xFFE3F0FF), // 薄い青系
-            body: Row(
-              children: [
-                Container(
-                  width: 240,
-                  color: Colors.grey[100],
-                  child: SafeArea(
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        const Text('情報',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 18)),
-                        Expanded(child: infoList),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: _buildMeasurementTableViewWidget(), // ← Stackをやめて直接表示
-                ),
-              ],
-            ),
-          );
-        }
-      },
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('測定データ'),
+      ),
+      drawer: infoDrawer,
+      body: _buildMeasurementTableViewWidget(),
     );
   }
 }

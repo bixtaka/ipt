@@ -86,9 +86,10 @@ class MeasurementTable extends StatelessWidget {
                         child: TextField(
                           controller: controllers[row][col],
                           textAlign: TextAlign.center,
-                          keyboardType: col == (columnTitles.length - 1)
-                              ? TextInputType.text
-                              : TextInputType.number,
+                          keyboardType: (col >= 1 && col <= 10)
+                              ? const TextInputType.numberWithOptions(
+                                  decimal: true)
+                              : TextInputType.text,
                           decoration: const InputDecoration(
                             isDense: true,
                             contentPadding: EdgeInsets.symmetric(
