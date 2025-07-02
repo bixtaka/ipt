@@ -23,6 +23,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: '測定値入力',
+      theme: ThemeData(
+        primarySwatch: Colors.lightBlue, // メインカラー
+        scaffoldBackgroundColor:
+            const Color.fromARGB(255, 243, 247, 250), // 薄い青系
+        // 他にもaccentColor, textThemeなどカスタマイズ可能
+      ),
       home: const MeasurementTabbedScreen(),
     );
   }

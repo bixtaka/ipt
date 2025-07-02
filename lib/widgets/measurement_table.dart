@@ -1,5 +1,6 @@
 // lib/widgets/measurement_table.dart
 import 'package:flutter/material.dart';
+import 'package:sticky_headers/sticky_headers/widget.dart';
 
 class MeasurementTable extends StatelessWidget {
   final List<List<TextEditingController>> controllers;
@@ -21,66 +22,92 @@ class MeasurementTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(), // 親でスクロールする場合
-      itemCount: controllers.length + 1, // +1 for header
-      itemBuilder: (context, index) {
-        if (index == 0) {
-          // ヘッダー
-          return Container(
-            color: Colors.grey[200],
-            child: Row(
-              children: List.generate(
-                columnTitles.length,
-                (col) => Expanded(
+    return SingleChildScrollView(
+      child: StickyHeader(
+        header: Container(
+          color: const Color.fromARGB(255, 63, 131, 231), // ネイビー（濃い青）に変更
+          child: Row(
+            children: List.generate(
+              columnTitles.length,
+              (col) => Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      right: col != columnTitles.length - 1
+                          ? BorderSide(color: Colors.grey)
+                          : BorderSide.none,
+                    ),
+                  ),
                   child: Padding(
                     padding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                     child: Text(
                       columnTitles[col],
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white, // ヘッダー文字色も白に
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
                 ),
               ),
             ),
-          );
-        }
-        final row = index - 1;
-        return Row(
+          ),
+        ),
+        content: Column(
           children: List.generate(
-            columnTitles.length,
-            (col) => Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-                child: TextField(
-                  controller: controllers[row][col],
-                  textAlign: TextAlign.center,
-                  keyboardType: col == (columnTitles.length - 1) // 備考列だけ通常
-                      ? TextInputType.text
-                      : TextInputType.number,
-                  decoration: const InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                    border: InputBorder.none,
-                  ),
-                  onTap: () => onCellTap(row, col),
-                  onChanged: (value) => onCellChanged(row, col, value),
-                  style: TextStyle(
-                    backgroundColor:
-                        (selectedRow == row && selectedColumn == col)
-                            ? Colors.blue.withOpacity(0.1)
-                            : null,
+            controllers.length,
+            (row) => Container(
+              decoration: BoxDecoration(
+                color: selectedRow == row
+                    ? const Color.fromARGB(255, 233, 75, 149)
+                        .withOpacity(0.18) // 青系でハイライト
+                    : null,
+                border: const Border(
+                  bottom: BorderSide(color: Colors.grey), // 横の罫線（行の下）
+                ),
+              ),
+              child: Row(
+                children: List.generate(
+                  columnTitles.length,
+                  (col) => Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          right: col != columnTitles.length - 1
+                              ? BorderSide(color: Colors.grey)
+                              : BorderSide.none,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 4, horizontal: 2),
+                        child: TextField(
+                          controller: controllers[row][col],
+                          textAlign: TextAlign.center,
+                          keyboardType: col == (columnTitles.length - 1)
+                              ? TextInputType.text
+                              : TextInputType.number,
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 4),
+                            border: InputBorder.none,
+                          ),
+                          onTap: () => onCellTap(row, col),
+                          onChanged: (value) => onCellChanged(row, col, value),
+                          // セル単体の背景色指定は削除
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

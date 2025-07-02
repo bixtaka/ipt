@@ -19,6 +19,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   late TabController _tabController;
 
   final List<String> infoLabels = [
+    '工事名',
     '測定日',
     '製品符号',
     '位置',
@@ -29,6 +30,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     '溶接姿勢',
     '溶接技能者',
     '積層数',
+    '板厚', // ← 追加
     '溶接長',
     '天気',
     '気温'
@@ -37,7 +39,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
   final List<String> columnTitles = [
     'パス数',
-    'パス温度開始',
+    'パス間温度開始',
     'パス間温度終了',
     '入熱',
     '電流',
@@ -61,13 +63,6 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   int? _selectedRow;
   int? _selectedColumn;
 
-  void main() {
-    final now = DateTime.now();
-    final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
-    final formatted = formatter.format(now);
-    print(formatted); // 例: 2025-05-23 18:30:00
-  }
-
   @override
   void initState() {
     super.initState();
@@ -79,9 +74,40 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
       (_) => List.generate(columnTitles.length, (_) => TextEditingController()),
     );
     _ticker = Ticker(_onTick)..start();
-    // 🟡 初期値設定：1行目にパス数「1」、作業開始「00:00」
-    _controllers[0][0].text = '1'; // パス数（0列目）
-    _controllers[0][8].text = '00:00'; // 作業開始（8列目）
+
+    // 🟡 ダミーデータをセット
+    /* _infoControllers[0].text = '○○工事'; // 工事名
+    _infoControllers[1].text = '2025-07-02'; // 測定日
+    _infoControllers[2].text = 'TEST-001';
+    _infoControllers[3].text = 'A-1';
+    _infoControllers[4].text = '部材ダミー';
+    _infoControllers[5].text = 'SS400';
+    _infoControllers[6].text = '30';
+    _infoControllers[7].text = '2.0';
+    _infoControllers[8].text = 'PA';
+    _infoControllers[9].text = '山田太郎';
+    _infoControllers[10].text = '3'; // 積層数
+    _infoControllers[11].text = '12'; // 板厚（例）
+    _infoControllers[12].text = '300'; // 溶接長
+    _infoControllers[13].text = '晴れ';
+    _infoControllers[14].text = '25';
+
+    for (int row = 0; row < _controllers.length; row++) {
+      _controllers[row][0].text = (row + 1).toString(); // パス数
+      _controllers[row][1].text = (100 + row).toString(); // パス間温度開始
+      _controllers[row][2].text = (110 + row).toString(); // パス間温度終了
+      _controllers[row][3].text = (row % 2 == 0) ? '12.34' : '15.67'; // 入熱
+      _controllers[row][4].text = '120'; // 電流
+      _controllers[row][5].text = '24'; // 電圧
+      _controllers[row][6].text = '10'; // 速度
+      _controllers[row][7].text = '01:30'; // 溶接時間
+      _controllers[row][8].text = '08:00'; // 作業開始
+      _controllers[row][9].text = '08:10'; // 作業終了
+      _controllers[row][10].text = '00:10'; // インターバル
+      _controllers[row][11].text = '備考テスト${row + 1}'; // 備考
+    }*/
+    _controllers.add(
+        List.generate(columnTitles.length, (_) => TextEditingController()));
   }
 
   void _onTick(Duration elapsed) {
@@ -131,17 +157,15 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     }
   }
 
-  // 必要に応じてロジックを追加
   void _updateCalculatedFields() {
-    // 計算処理はsetState外で実施
     for (int row = 0; row < initialRowCount; row++) {
       final startText = _controllers[row][8].text;
       final endText = _controllers[row][9].text;
 
       if (startText.isEmpty || endText.isEmpty) {
         _controllers[row][7].text = '';
-        _controllers[row][6].text = '';
         _controllers[row][10].text = '';
+        // 速度(6)・入熱(3)はここでクリアしない
         continue;
       }
 
@@ -159,8 +183,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
       if (weldingTime <= 0) {
         _controllers[row][7].text = '';
-        _controllers[row][6].text = '';
         _controllers[row][10].text = '';
+        // 速度(6)・入熱(3)はここでクリアしない
         continue;
       }
 
@@ -172,14 +196,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
       _controllers[row][7].text = formatTime(weldingTime);
 
-      double weldingLength = double.tryParse(_infoControllers[10].text) ?? 0;
-      if (weldingLength > 0) {
-        double speedValue = weldingLength / (weldingTime / 60);
-        _controllers[row][6].text = speedValue.toStringAsFixed(2);
-      } else {
-        _controllers[row][6].text = '';
-      }
-
+      // インターバル計算
       if (row < _controllers.length - 1) {
         final nextStartText = _controllers[row + 1][8].text;
         if (nextStartText.isNotEmpty) {
@@ -197,7 +214,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         _controllers[row][10].text = '';
       }
     }
-    setState(() {}); // 1回だけ
+    setState(() {});
   }
 
   Duration? _parseDuration(String text) {
@@ -224,24 +241,20 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         final current = double.tryParse(_controllers[row][4].text) ?? 0;
         final voltage = double.tryParse(_controllers[row][5].text) ?? 0;
         final speed = double.tryParse(_controllers[row][6].text) ?? 1;
-        final heatInput = (current * voltage * 60) / (speed * 1000);
+        final heatInput = (current * voltage * 60) / (speed * 10);
         _controllers[row][3].text = heatInput.toStringAsFixed(2);
       } catch (_) {}
     });
   }
 
-// _downloadExcel の中身
   void _downloadExcel() async {
     try {
-      // 情報入力データを2次元リストに変換
       List<List<String>> infoData = [
         infoLabels,
         _infoControllers.map((c) => c.text).toList(),
       ];
 
-      // 測定値データを2次元リストに変換
       List<List<String>> measurementData = [];
-
       measurementData.add(columnTitles);
 
       for (int row = 0; row < _controllers.length; row++) {
@@ -252,7 +265,6 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         measurementData.add(rowData);
       }
 
-      // ★ 2つの引数を渡す ★
       await exportExcelWebWithInfo(infoData, measurementData);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -277,7 +289,6 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
             onStop: _stopStopwatch,
             onReset: _resetStopwatch,
             onRecord: _fillSelectedCellWithTime,
-            onCalculateHeat: () => _calculateHeatInputAt(_selectedRow ?? 0),
           ),
           const SizedBox(height: 12),
           Expanded(
@@ -292,22 +303,73 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                   _selectedColumn = col;
                 });
               },
-              onCellChanged: (row, col, _) {
-                if (row == _controllers.length - 1) {
+              onCellChanged: (row, col, value) {
+                // 最後の行のどこかに入力があったら新しい行を追加
+                if (row == _controllers.length - 1 && value.isNotEmpty) {
+                  final isLastRowEmpty =
+                      _controllers.last.every((c) => c.text.isEmpty);
+                  if (!isLastRowEmpty) {
+                    setState(() {
+                      _controllers.add(List.generate(
+                          columnTitles.length, (_) => TextEditingController()));
+                    });
+                  }
+                }
+
+                // 電流(4), 電圧(5), 速度(6)のいずれかが変更されたら速度(6)と入熱(3)を再計算
+                if (col == 4 || col == 5 || col == 6 || col == 8 || col == 9) {
+                  // 溶接長
+                  final weldingLength =
+                      double.tryParse(_infoControllers[12].text);
+                  // 作業開始・終了
+                  final startText = _controllers[row][8].text;
+                  final endText = _controllers[row][9].text;
+
+                  int toSeconds(String timeText) {
+                    final parts = timeText.split(':');
+                    if (parts.length != 2) return 0;
+                    final minutes = int.tryParse(parts[0]) ?? 0;
+                    final seconds = int.tryParse(parts[1]) ?? 0;
+                    return minutes * 60 + seconds;
+                  }
+
+                  int startSec = toSeconds(startText);
+                  int endSec = toSeconds(endText);
+                  int weldingTime = endSec - startSec;
+
+                  // 速度再計算
+                  String speedStr = '';
+                  if (weldingLength != null && weldingTime > 0) {
+                    double speedValue = weldingLength / (weldingTime / 60);
+                    speedStr = (speedValue).toStringAsFixed(2);
+                  }
                   setState(() {
-                    _controllers.add(List.generate(
-                        columnTitles.length, (_) => TextEditingController()));
+                    _controllers[row][6].text = speedStr;
+                  });
+
+                  // 入熱再計算
+                  final current = double.tryParse(_controllers[row][4].text);
+                  final voltage = double.tryParse(_controllers[row][5].text);
+                  final speed = double.tryParse(_controllers[row][6].text);
+                  String heatInput = '';
+                  if (current != null &&
+                      voltage != null &&
+                      speed != null &&
+                      speed != 0) {
+                    heatInput = ((current * voltage * 60) / (speed * 1000))
+                        .toStringAsFixed(2);
+                  }
+                  setState(() {
+                    _controllers[row][3].text = heatInput;
                   });
                 }
 
                 if (col == 1) {
                   _controllers[row][0].text = (row + 1).toString();
                 }
-
                 if (col == 10) {
                   _calculateHeatInputAt(row);
                 }
-
                 _updateCalculatedFields();
               },
             ),
@@ -337,154 +399,76 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width > 900; // iPad横ならtrue
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('測定データ入力'),
+    final infoList = ListView.builder(
+      itemCount: infoLabels.length,
+      itemBuilder: (context, index) => ListTile(
+        title: Text(infoLabels[index]),
+        subtitle: TextField(
+          controller: _infoControllers[index],
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          ),
+          onChanged: (_) {
+            setState(() {}); // 入力内容を即時反映
+          },
+        ),
       ),
-      drawer: isWide
-          ? null
-          : Drawer(
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: InfoForm(
-                    infoLabels: infoLabels,
-                    controllers: _infoControllers,
-                    onChanged: (index) {
-                      _updateCalculatedFields();
-                      if (index == 11) {
-                        _calculateHeatInputAt(_selectedRow ?? 0);
-                      }
-                    },
-                  ),
-                ),
-              ),
+    );
+
+    final infoDrawer = Drawer(
+      child: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            const Text('情報',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            Expanded(child: infoList),
+          ],
+        ),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 画面幅が600未満ならドロワー、それ以上ならサイドバー
+        if (constraints.maxWidth < 600) {
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text('測定データ'),
             ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: isWide
-            ? Row(
-                children: [
-                  SizedBox(
-                    width: 320,
-                    child: InfoForm(
-                      infoLabels: infoLabels,
-                      controllers: _infoControllers,
-                      onChanged: (index) {
-                        _updateCalculatedFields();
-                        if (index == 11) {
-                          _calculateHeatInputAt(_selectedRow ?? 0);
-                        }
-                      },
-                    ),
-                  ),
-                  const VerticalDivider(width: 24),
-                  Expanded(
+            drawer: infoDrawer,
+            body: _buildMeasurementTableViewWidget(), // ← Stackをやめて直接表示
+          );
+        } else {
+          return Scaffold(
+            //backgroundColor: const Color(0xFFE3F0FF), // 薄い青系
+            body: Row(
+              children: [
+                Container(
+                  width: 240,
+                  color: Colors.grey[100],
+                  child: SafeArea(
                     child: Column(
                       children: [
-                        StopwatchControls(
-                          displayTime: _displayTime,
-                          onStart: _startStopwatch,
-                          onStop: _stopStopwatch,
-                          onReset: _resetStopwatch,
-                          onRecord: _fillSelectedCellWithTime,
-                          onCalculateHeat: () =>
-                              _calculateHeatInputAt(_selectedRow ?? 0),
-                        ),
-                        const SizedBox(height: 12),
-                        Expanded(
-                          child: MeasurementTable(
-                            controllers: _controllers,
-                            columnTitles: columnTitles,
-                            selectedRow: _selectedRow,
-                            selectedColumn: _selectedColumn,
-                            onCellTap: (row, col) {
-                              setState(() {
-                                _selectedRow = row;
-                                _selectedColumn = col;
-                              });
-                            },
-                            onCellChanged: (row, col, _) {
-                              if (row == _controllers.length - 1) {
-                                setState(() {
-                                  _controllers.add(List.generate(
-                                      columnTitles.length,
-                                      (_) => TextEditingController()));
-                                });
-                              }
-                              if (col == 1) {
-                                _controllers[row][0].text =
-                                    (row + 1).toString();
-                              }
-                              if (col == 10) {
-                                _calculateHeatInputAt(row);
-                              }
-                              _updateCalculatedFields();
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: _downloadExcel,
-                          child: const Text('Excel出力'),
-                        ),
+                        const SizedBox(height: 16),
+                        const Text('情報',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 18)),
+                        Expanded(child: infoList),
                       ],
                     ),
                   ),
-                ],
-              )
-            : SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    StopwatchControls(
-                      displayTime: _displayTime,
-                      onStart: _startStopwatch,
-                      onStop: _stopStopwatch,
-                      onReset: _resetStopwatch,
-                      onRecord: _fillSelectedCellWithTime,
-                      onCalculateHeat: () =>
-                          _calculateHeatInputAt(_selectedRow ?? 0),
-                    ),
-                    const SizedBox(height: 12),
-                    MeasurementTable(
-                      controllers: _controllers,
-                      columnTitles: columnTitles,
-                      selectedRow: _selectedRow,
-                      selectedColumn: _selectedColumn,
-                      onCellTap: (row, col) {
-                        setState(() {
-                          _selectedRow = row;
-                          _selectedColumn = col;
-                        });
-                      },
-                      onCellChanged: (row, col, _) {
-                        if (row == _controllers.length - 1) {
-                          setState(() {
-                            _controllers.add(List.generate(columnTitles.length,
-                                (_) => TextEditingController()));
-                          });
-                        }
-                        if (col == 1) {
-                          _controllers[row][0].text = (row + 1).toString();
-                        }
-                        if (col == 10) {
-                          _calculateHeatInputAt(row);
-                        }
-                        _updateCalculatedFields();
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _downloadExcel,
-                      child: const Text('Excel出力'),
-                    ),
-                  ],
                 ),
-              ),
-      ),
+                Expanded(
+                  child: _buildMeasurementTableViewWidget(), // ← Stackをやめて直接表示
+                ),
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 }

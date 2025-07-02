@@ -7,7 +7,6 @@ class StopwatchControls extends StatelessWidget {
   final VoidCallback onStop;
   final VoidCallback onReset;
   final VoidCallback onRecord;
-  final VoidCallback onCalculateHeat;
 
   const StopwatchControls({
     super.key,
@@ -16,7 +15,6 @@ class StopwatchControls extends StatelessWidget {
     required this.onStop,
     required this.onReset,
     required this.onRecord,
-    required this.onCalculateHeat,
   });
 
   @override
@@ -35,8 +33,6 @@ class StopwatchControls extends StatelessWidget {
             ElevatedButton(onPressed: onReset, child: const Text('Reset')),
             const SizedBox(width: 8),
             ElevatedButton(onPressed: onRecord, child: const Text('記録')),
-            const SizedBox(width: 8),
-            ElevatedButton(onPressed: onCalculateHeat, child: const Text('入熱')),
           ],
         ),
       ],
