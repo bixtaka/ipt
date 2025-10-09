@@ -620,13 +620,47 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     ),
 
                   const SizedBox(height: 12),
-                  StopwatchControls(
-                    displayTime: _displayTime,
-                    isRunning: _stopwatch.isRunning,
-                    onStart: _toggleStopwatch,
-                    onStop: _stopStopwatch,
-                    onReset: _resetStopwatch,
-                    onRecord: _fillSelectedCellWithTime,
+                  Consumer<AppState>(
+                    builder: (context, app, child) {
+                      final s = app.currentSession;
+                      return StopwatchControls(
+                        displayTime: _displayTime,
+                        isRunning: s.isRunning,
+                        isPaused: s.isPaused,
+                        events: s.events,
+                        onStart: _toggleStopwatch,
+                        onStop: _stopStopwatch,
+                        onReset: _resetStopwatch,
+                        onRecord: _fillSelectedCellWithTime,
+                        onPause: app.pauseStopwatch,
+                        onResume: app.resumeStopwatch,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // セッション時間表示
+                  Consumer<AppState>(
+                    builder: (context, app, child) {
+                      final s = app.currentSession;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          '実作業: ${s.totalWork.inSeconds}s  中断: ${s.totalPause.inSeconds}s  合計: ${s.totalElapsed?.inSeconds ?? 0}s',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 12),
 
@@ -727,10 +761,10 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     ),
                   ),
                   const SizedBox(height: 12),
-                  
+
                   // TODO: dev-only - 開発専用デバッグボタン（後で削除）
                   _buildDevDebugPanel(),
-                  
+
                   const SizedBox(height: 12),
                 ],
               ),
@@ -766,7 +800,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              
+
               // デバッグボタン
               Wrap(
                 spacing: 8,
@@ -777,7 +811,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Start', style: TextStyle(fontSize: 12)),
                   ),
@@ -786,7 +821,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Pause', style: TextStyle(fontSize: 12)),
                   ),
@@ -795,7 +831,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Resume', style: TextStyle(fontSize: 12)),
                   ),
@@ -804,7 +841,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Stop', style: TextStyle(fontSize: 12)),
                   ),
@@ -813,7 +851,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.purple,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Record', style: TextStyle(fontSize: 12)),
                   ),
@@ -822,15 +861,16 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                     ),
                     child: const Text('Reset', style: TextStyle(fontSize: 12)),
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // セッション情報表示
               Container(
                 padding: const EdgeInsets.all(8),
