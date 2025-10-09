@@ -628,23 +628,24 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                         isRunning: s.isRunning,
                         isPaused: s.isPaused,
                         events: s.events,
-                        onStart: _toggleStopwatch,
-                        onStop: _stopStopwatch,
-                        onReset: _resetStopwatch,
-                        onRecord: _fillSelectedCellWithTime,
+                        onStart: app.startStopwatch,
+                        onStop: app.stopStopwatch,
+                        onReset: app.resetStopwatch,
+                        onRecord: app.recordLap,
                         onPause: app.pauseStopwatch,
                         onResume: app.resumeStopwatch,
                       );
                     },
                   ),
                   const SizedBox(height: 8),
-                  
+
                   // セッション時間表示
                   Consumer<AppState>(
                     builder: (context, app, child) {
                       final s = app.currentSession;
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         decoration: BoxDecoration(
                           color: Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(8),
@@ -1201,7 +1202,30 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
           ],
         ),
         drawer: infoDrawer,
-        body: _buildMeasurementTableViewWidget(),
+        body: Column(
+          children: [
+            Expanded(child: _buildMeasurementTableViewWidget()),
+            // TODO: dev-only - ミニHUD（後で削除）
+            Builder(
+              builder: (context) {
+                final app = context.watch<AppState>();
+                final s = app.currentSession;
+                final total = s.totalElapsed?.inSeconds ?? 0;
+                final work  = s.totalWork.inSeconds;
+                final pause = s.totalPause.inSeconds;
+                return Container(
+                  color: const Color(0x22FF0000), // dev-only HUD
+                  padding: const EdgeInsets.all(8),
+                  child: Text(
+                    '⏱ work:${work}s  pause:${pause}s  total:${total}s  '
+                    'running:${s.isRunning} paused:${s.isPaused}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
