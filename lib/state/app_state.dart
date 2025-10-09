@@ -234,6 +234,9 @@ class AppState extends ChangeNotifier {
     final stopped = s.stop(DateTime.now());
     _saveSession(stopped);
     _reflectSessionToPass(stopped);
+    
+    // TODO: dev-only - デバッグ出力（後で削除）
+    debugPrint('[session] work=${stopped.totalWork.inSeconds}s pause=${stopped.totalPause.inSeconds}s total=${stopped.totalElapsed?.inSeconds}');
   }
 
   void resetStopwatch() {
@@ -250,18 +253,22 @@ class AppState extends ChangeNotifier {
     final idx = currentPassIndex;
     if (idx < 0 || idx >= passes.length) return;
 
-    final workSec  = s.totalWork.inMilliseconds / 1000.0;
+    final workSec = s.totalWork.inMilliseconds / 1000.0;
     final pauseSec = s.totalPause.inMilliseconds / 1000.0;
-    final totalSec = s.totalElapsed == null ? null : s.totalElapsed!.inMilliseconds / 1000.0;
+    final totalSec =
+        s.totalElapsed == null ? null : s.totalElapsed!.inMilliseconds / 1000.0;
 
     final old = passes[idx];
     final updated = old.copyWith(
-      weldTimeSec: workSec,   // 既存の入熱計算で使用する時間は実作業
+      weldTimeSec: workSec, // 既存の入熱計算で使用する時間は実作業
       pauseSec: pauseSec,
       totalSec: totalSec,
     );
 
     passes[idx] = updated;
+
+    // TODO: dev-only - デバッグ出力（後で削除）
+    debugPrint('[reflect] pass[$idx] weldTimeSec=${updated.weldTimeSec} pauseSec=${updated.pauseSec} totalSec=${updated.totalSec}');
 
     // 既存の導出計算がある場合は呼び出し（関数名が異なる場合はスキップしてください）
     try {
