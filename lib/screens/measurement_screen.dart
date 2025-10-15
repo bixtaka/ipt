@@ -1211,15 +1211,50 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                 final app = context.watch<AppState>();
                 final s = app.currentSession;
                 final total = s.totalElapsed?.inSeconds ?? 0;
-                final work  = s.totalWork.inSeconds;
+                final work = s.totalWork.inSeconds;
                 final pause = s.totalPause.inSeconds;
                 return Container(
                   color: const Color(0x22FF0000), // dev-only HUD
                   padding: const EdgeInsets.all(8),
-                  child: Text(
-                    '⏱ work:${work}s  pause:${pause}s  total:${total}s  '
-                    'running:${s.isRunning} paused:${s.isPaused}',
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  child: Column(
+                    children: [
+                      Text(
+                        '⏱ work:${work}s  pause:${pause}s  total:${total}s  '
+                        'running:${s.isRunning} paused:${s.isPaused}',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      // TODO: dev-only - 開発用ボタン群（後で削除）
+                      Wrap(
+                        spacing: 8,
+                        children: [
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().startStopwatch,
+                            child: const Text('Start'),
+                          ),
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().pauseStopwatch,
+                            child: const Text('Pause'),
+                          ),
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().resumeStopwatch,
+                            child: const Text('Resume'),
+                          ),
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().stopStopwatch,
+                            child: const Text('Stop'),
+                          ),
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().recordLap,
+                            child: const Text('Record'),
+                          ),
+                          ElevatedButton(
+                            onPressed: context.read<AppState>().resetStopwatch,
+                            child: const Text('Reset'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 );
               },
