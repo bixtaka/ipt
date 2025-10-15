@@ -234,9 +234,10 @@ class AppState extends ChangeNotifier {
     final stopped = s.stop(DateTime.now());
     _saveSession(stopped);
     _reflectSessionToPass(stopped);
-    
+
     // TODO: dev-only - デバッグ出力（後で削除）
-    debugPrint('[session] work=${stopped.totalWork.inSeconds}s pause=${stopped.totalPause.inSeconds}s total=${stopped.totalElapsed?.inSeconds}');
+    debugPrint(
+        '[session] work=${stopped.totalWork.inSeconds}s pause=${stopped.totalPause.inSeconds}s total=${stopped.totalElapsed?.inSeconds}');
   }
 
   void resetStopwatch() {
@@ -251,7 +252,13 @@ class AppState extends ChangeNotifier {
   // ---------- セッション反映（内部関数） ----------
   void _reflectSessionToPass(WeldingSession s) {
     final idx = currentPassIndex;
-    if (idx < 0 || idx >= passes.length) return;
+    debugPrint('[reflect] idx=$idx len=${passes.length} '
+               'work=${s.totalWork.inSeconds} pause=${s.totalPause.inSeconds} total=${s.totalElapsed?.inSeconds}');
+
+    if (idx < 0 || idx >= passes.length) {
+      debugPrint('[reflect] skipped (index out of range)');
+      return;
+    }
 
     final workSec = s.totalWork.inMilliseconds / 1000.0;
     final pauseSec = s.totalPause.inMilliseconds / 1000.0;
@@ -268,7 +275,7 @@ class AppState extends ChangeNotifier {
     passes[idx] = updated;
 
     // TODO: dev-only - デバッグ出力（後で削除）
-    debugPrint('[reflect] pass[$idx] weldTimeSec=${updated.weldTimeSec} pauseSec=${updated.pauseSec} totalSec=${updated.totalSec}');
+    debugPrint('[reflect] pass[$idx] updated: weldTimeSec=${updated.weldTimeSec} pauseSec=${updated.pauseSec} totalSec=${updated.totalSec}');
 
     // 既存の導出計算がある場合は呼び出し（関数名が異なる場合はスキップしてください）
     try {
