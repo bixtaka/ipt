@@ -10,7 +10,6 @@ class StopwatchControls extends StatelessWidget {
   final VoidCallback onRecord;
   final bool isRunning;
 
-  // 追加の可変プロパティ（すべて nullable、デフォルト null）
   final VoidCallback? onPause;
   final VoidCallback? onResume;
   final bool? isPaused;
@@ -32,6 +31,7 @@ class StopwatchControls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = isRunning ? Colors.green.shade700 : Colors.grey.shade700;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -53,104 +53,103 @@ class StopwatchControls extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                '⏱ $displayTime',
+                displayTime,
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color:
-                      isRunning ? Colors.green.shade700 : Colors.grey.shade700,
+                  color: textColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 一時停止/再開ボタンのトグル表示
-              if (isPaused == true && onResume != null)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    debugPrint('[StopwatchControls] Resume button pressed');
-                    onResume?.call();
-                  },
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('再開'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                  ),
-                )
-              else if (isRunning == true && onPause != null)
-                ElevatedButton.icon(
-                  onPressed: () {
-                    debugPrint('[StopwatchControls] Pause button pressed');
-                    onPause?.call();
-                  },
-                  icon: const Icon(Icons.pause),
-                  label: const Text('一時停止'),
+              Expanded(
+                child: SizedBox(
+                  height: 56,
+                  child: (isPaused == true && onResume != null)
+                      ? ElevatedButton.icon(
+                          onPressed: onResume,
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('再開'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            textStyle: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : (isRunning == true && onPause != null)
+                          ? ElevatedButton.icon(
+                              onPressed: onPause,
+                              icon: const Icon(Icons.pause),
+                              label: const Text('一時停止'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange,
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            )
+                          : ElevatedButton.icon(
+                              onPressed: () =>
+                                  isRunning ? onStop() : onStart(),
+                              icon: Icon(
+                                  isRunning ? Icons.pause : Icons.play_arrow),
+                              label: Text(isRunning ? '停止' : '開始'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    isRunning ? Colors.red : Colors.green,
+                                foregroundColor: Colors.white,
+                                textStyle: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              SizedBox(
+                height: 56,
+                child: ElevatedButton.icon(
+                  onPressed: onReset,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('リセット'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
                     foregroundColor: Colors.white,
                   ),
-                )
-              else
-                // 従来の開始/停止ボタン
-                ElevatedButton.icon(
-                  onPressed: () {
-                    if (isRunning) {
-                      debugPrint('[StopwatchControls] Stop button pressed');
-                      onStop();
-                    } else {
-                      debugPrint('[StopwatchControls] Start button pressed');
-                      onStart();
-                    }
-                  },
-                  icon: Icon(isRunning ? Icons.pause : Icons.play_arrow),
-                  label: Text(isRunning ? '停止' : '開始'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isRunning ? Colors.red : Colors.green,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {
-                  debugPrint('[StopwatchControls] Reset button pressed');
-                  onReset();
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text('リセット'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () {
-                  debugPrint('[StopwatchControls] Record button pressed');
-                  onRecord();
-                },
-                icon: const Icon(Icons.timer),
-                label: const Text('記録'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ElevatedButton.icon(
+              onPressed: onRecord,
+              icon: const Icon(Icons.timer),
+              label: const Text('記録'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
-            'Space: 開始/停止 | R: リセット | Enter: 記録',
+            'Space: 開姁E停止 | R: リセチE�� | Enter: 記録',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,
             ),
           ),
-
-          // eventsログ表示（nullの場合は非表示）
           if (events != null && events!.isNotEmpty) ...[
             const SizedBox(height: 12),
             Container(
@@ -165,7 +164,7 @@ class StopwatchControls extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Event Log:',
+                    'イベントログ:',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -174,8 +173,7 @@ class StopwatchControls extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   ...events!.take(10).map((event) {
-                    final timeStr =
-                        event.at.toString().substring(11, 19); // HH:mm:ss
+                    final timeStr = event.at.toString().substring(11, 19);
                     final typeStr = _getEventTypeString(event.type);
                     return Text(
                       '$timeStr: $typeStr',
@@ -194,20 +192,21 @@ class StopwatchControls extends StatelessWidget {
     );
   }
 
-  String _getEventTypeString(String type) {
+  String _getEventTypeString(StopwatchEventType type) {
     switch (type) {
-      case 'start':
-        return '開始';
-      case 'pause':
+      case StopwatchEventType.start:
+        return '開姁E;
+      case StopwatchEventType.pause:
         return '一時停止';
-      case 'resume':
+      case StopwatchEventType.resume:
         return '再開';
-      case 'stop':
+      case StopwatchEventType.stop:
         return '停止';
-      case 'record':
+      case StopwatchEventType.record:
         return '記録';
       default:
-        return type;
+        return type.name;
     }
   }
 }
+

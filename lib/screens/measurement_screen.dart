@@ -1,6 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'dart:convert' show LineSplitter;
 import 'package:provider/provider.dart';
 import '../services/excel_exporter.dart';
 import '../services/data_storage.dart';
@@ -8,6 +10,7 @@ import '../utils/validators.dart';
 import '../widgets/stopwatch_controls.dart';
 import '../widgets/measurement_table.dart';
 import '../widgets/keyboard_shortcuts.dart';
+import '../widgets/member_spec_tile.dart';
 import '../state/app_state.dart';
 import 'dart:async';
 
@@ -133,6 +136,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
 
     // 保存されたデータの読み込み
     _loadSavedData();
+    _loadCsvInitialDefaults();
 
     // 自動保存タイマーの開始
     _startAutoSaveTimer();
@@ -247,6 +251,98 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     });
   }
 
+  Future<void> _loadCsvInitialIfEmpty() async {
+    try {
+      // 既に保存データがある場合は何もしない      // 既存内容が空でない場合は読み込まない\n      bool _hasAny = false;\n      for (final row in _controllers) { for (final ctrl in row) { if (ctrl.text.isNotEmpty) { _hasAny = true; break; } } if (_hasAny) break; }\n      if (_hasAny) return;
+
+      String? csv;
+      try {
+        final s = await rootBundle.loadString('data/testdata.csv');
+        if (s.trim().isNotEmpty) csv = s;
+      } catch (_) {}
+      if (csv == null) return;
+
+      final lines = const LineSplitter().convert(csv);
+      if (lines.isEmpty) return;
+      int rowIdx = 0;
+      for (int i = 1; i < lines.length; i++) { // skip header
+        final raw = lines[i].trim();
+        if (raw.isEmpty) continue;
+        final cols = raw.split(',');
+        // ensure rows
+        if (rowIdx >= _controllers.length) {
+          _controllers.add(List.generate(columnTitles.length, (_) => TextEditingController()));
+          // attach listeners to new row
+          for (final controller in _controllers.last) {
+            controller.addListener(_onDataChanged);
+          }
+        }
+        // mapping: 0=pass label, 1=startTemp, 2=endTemp, 3=amps, 4=volts
+        if (cols.isNotEmpty) {
+          _controllers[rowIdx][0].text = cols[0];
+        }
+        if (cols.length > 1) _controllers[rowIdx][1].text = cols[1];
+        if (cols.length > 2) _controllers[rowIdx][2].text = cols[2];
+        if (cols.length > 3) _controllers[rowIdx][3].text = cols[3];
+        if (cols.length > 4) _controllers[rowIdx][4].text = cols[4];
+        rowIdx++;
+      }
+      setState(() {});
+      // オートセーブ対象にする
+      _hasUnsavedChanges = true;
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // 初期CSV読み込みの判定用: 時刻列(8,9)は除外してチェック
+  bool _tableHasUserData() {
+    for (final row in _controllers) {
+      for (int c = 0; c < row.length; c++) {
+        if (c == 8 || c == 9) continue;
+        if (row[c].text.trim().isNotEmpty) return true;
+      }
+    }
+    return false;
+  }
+
+  // data/test.csv または data/testdata.csv を使って初期値を投入
+  Future<void> _loadCsvInitialDefaults() async {
+    try {
+      if (_tableHasUserData()) return;
+      String? csv;
+      for (final path in ['data/test.csv', 'data/testdata.csv']) {
+        try {
+          final s = await rootBundle.loadString(path);
+          if (s.trim().isNotEmpty) { csv = s; break; }
+        } catch (_) {}
+      }
+      if (csv == null) return;
+
+      final lines = const LineSplitter().convert(csv);
+      if (lines.isEmpty) return;
+      int rowIdx = 0;
+      for (int i = 1; i < lines.length; i++) { // ヘッダー行をスキップ
+        final raw = lines[i].trim();
+        if (raw.isEmpty) continue;
+        final cols = raw.split(',');
+        if (rowIdx >= _controllers.length) {
+          _controllers.add(List.generate(columnTitles.length, (_) => TextEditingController()));
+          for (final controller in _controllers.last) {
+            controller.addListener(_onDataChanged);
+          }
+        }
+        if (cols.isNotEmpty) _controllers[rowIdx][0].text = cols[0];
+        if (cols.length > 1) _controllers[rowIdx][1].text = cols[1];
+        if (cols.length > 2) _controllers[rowIdx][2].text = cols[2];
+        if (cols.length > 3) _controllers[rowIdx][3].text = cols[3];
+        if (cols.length > 4) _controllers[rowIdx][4].text = cols[4];
+        rowIdx++;
+      }
+      setState(() {});
+      _hasUnsavedChanges = true;
+    } catch (_) {}
+  }
   Future<void> _saveData() async {
     try {
       await DataStorageService.saveInfoData(_infoControllers);
@@ -264,17 +360,14 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   }
 
   void _onTick(Duration elapsed) {
-    if (_stopwatch.isRunning) {
-      final int seconds = _stopwatch.elapsed.inSeconds;
-      final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
-      final secs = (seconds % 60).toString().padLeft(2, '0');
-      setState(() {
-        _displayTime = '$minutes:$secs';
-      });
-      print('タイマー更新: $_displayTime');
-    }
+    final app = context.read<AppState>();
+    final int seconds = ((app.globalElapsedAt(DateTime.now()).inMilliseconds) / 1000.0).round();
+    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
+    final secs = (seconds % 60).toString().padLeft(2, '0');
+    setState(() {
+      _displayTime = '$minutes:$secs';
+    });
   }
-
   void _stopStopwatch() => setState(() {
         _stopwatch.stop();
         _ticker.stop();
@@ -301,12 +394,51 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
           print('ストップウォッチを開始しました');
         }
       });
+  // --- 測定の開始/終了をアプリ状態とローカル表示の両方に反映 ---
+  void _startMeasurement() {
+    final app = context.read<AppState>();
+    app.startStopwatch();
+    setState(() {
+      if (!_stopwatch.isRunning) {
+        _stopwatch.start();
+        _ticker.start();
+        _startStopwatchTimer();
+      }
+    });
+  }
 
-  void _startStopwatchTimer() {
+  void _endMeasurement() {
+    final app = context.read<AppState>();
+    app.stopStopwatch();
+    setState(() {
+      if (false) {
+        _stopwatch.stop();
+        _ticker.stop();
+        _stopwatchTimer?.cancel();
+      }
+    });
+  }
+
+  
+  void _pauseMeasurement() {
+    final app = context.read<AppState>();
+    app.pauseActiveStopwatch();
+    setState(() {
+      _stopwatch.stop();
+    });
+  }
+
+  void _resumeMeasurement() {
+    final app = context.read<AppState>();
+    app.resumeActiveStopwatch();
+    setState(() {
+      _stopwatch.start();
+      _startStopwatchTimer();
+    });
+  }void _startStopwatchTimer() {
     _stopwatchTimer?.cancel();
     _stopwatchTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
-      if (!_stopwatch.isRunning) return;
-      final int seconds = _stopwatch.elapsed.inSeconds;
+      final int seconds = ((context.read<AppState>().globalElapsedAt(DateTime.now()).inMilliseconds) / 1000.0).round();
       final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
       final secs = (seconds % 60).toString().padLeft(2, '0');
       if (_displayTime != '$minutes:$secs') {
@@ -332,7 +464,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         return;
       }
 
-      final int seconds = _stopwatch.elapsed.inSeconds;
+      final int seconds = ((context.read<AppState>().globalElapsedAt(DateTime.now()).inMilliseconds) / 1000.0).round();
       final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
       final secs = (seconds % 60).toString().padLeft(2, '0');
       final currentDisplayTime = '$minutes:$secs';
@@ -419,7 +551,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         final current = double.tryParse(_controllers[row][4].text) ?? 0;
         final voltage = double.tryParse(_controllers[row][5].text) ?? 0;
         final speed = double.tryParse(_controllers[row][6].text) ?? 1;
-        final heatInput = (current * voltage * 60) / (speed * 10);
+        // Heat input [kJ/cm] = (I[A] * V[V] * 60) / (speed[cm/min] * 1000)
+        final heatInput = (current * voltage * 60) / (speed * 1000);
         _controllers[row][3].text = heatInput.toStringAsFixed(2);
       } catch (_) {}
     });
@@ -628,13 +761,13 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                         isRunning: s.isRunning,
                         isPaused: s.isPaused,
                         events: s.events,
-                        onStart: app.startStopwatch,
-                        onStop: app.stopStopwatch,
+                        onStart: _startMeasurement,
+                        onStop: _endMeasurement,
                         onReset: app.resetStopwatch,
                         onRecord: app.recordLap,
-                        onPause: app.pauseStopwatch,
-                        onResume: app.resumeStopwatch,
-                      );
+                        onPause: _pauseMeasurement,
+                        onResume: _resumeMeasurement,
+                        );
                     },
                   ),
                   const SizedBox(height: 8),
@@ -652,7 +785,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                           border: Border.all(color: Colors.blue.shade200),
                         ),
                         child: Text(
-                          '実作業: ${s.totalWork.inSeconds}s  中断: ${s.totalPause.inSeconds}s  合計: ${s.totalElapsed?.inSeconds ?? 0}s',
+                          '実作業: ${((s.totalWork.inMilliseconds) / 1000.0).round()}s  中断: ${((s.totalPause.inMilliseconds) / 1000.0).round()}s  合計: ${s.totalElapsed == null ? 0 : ((s.totalElapsed!.inMilliseconds) / 1000.0).round()}s',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue.shade700,
@@ -818,7 +951,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     child: const Text('Start', style: TextStyle(fontSize: 12)),
                   ),
                   ElevatedButton(
-                    onPressed: () => appState.pauseStopwatch(),
+                    onPressed: null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
@@ -828,7 +961,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     child: const Text('Pause', style: TextStyle(fontSize: 12)),
                   ),
                   ElevatedButton(
-                    onPressed: () => appState.resumeStopwatch(),
+                    onPressed: null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
@@ -837,16 +970,17 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     ),
                     child: const Text('Resume', style: TextStyle(fontSize: 12)),
                   ),
-                  ElevatedButton(
-                    onPressed: () => appState.stopStopwatch(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                    ),
-                    child: const Text('Stop', style: TextStyle(fontSize: 12)),
-                  ),
+                  // Removed hard stop: stopwatch should not stop until Reset
+                  // ElevatedButton(
+                  //   onPressed: () => appState.stopStopwatch(),
+                  //   style: ElevatedButton.styleFrom(
+                  //     backgroundColor: Colors.red,
+                  //     foregroundColor: Colors.white,
+                  //     padding: const EdgeInsets.symmetric(
+                  //         horizontal: 12, vertical: 6),
+                  //   ),
+                  //   child: const Text('Stop', style: TextStyle(fontSize: 12)),
+                  // ),
                   ElevatedButton(
                     onPressed: () => appState.recordLap(),
                     style: ElevatedButton.styleFrom(
@@ -893,15 +1027,15 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Total Work: ${session.totalWork.inSeconds.toStringAsFixed(1)}s',
+                      'Total Work: ${((session.totalWork.inMilliseconds) / 1000.0).round()}s',
                       style: const TextStyle(fontSize: 11),
                     ),
                     Text(
-                      'Total Pause: ${session.totalPause.inSeconds.toStringAsFixed(1)}s',
+                      'Total Pause: ${((session.totalPause.inMilliseconds) / 1000.0).round()}s',
                       style: const TextStyle(fontSize: 11),
                     ),
                     Text(
-                      'Total Elapsed: ${session.totalElapsed?.inSeconds.toStringAsFixed(1) ?? 'null'}s',
+                      'Total Elapsed: ${session.totalElapsed == null ? 'null' : (((session.totalElapsed!.inMilliseconds) / 1000.0).round().toString()) + 's'}',
                       style: const TextStyle(fontSize: 11),
                     ),
                     Text(
@@ -939,6 +1073,14 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     final infoList = ListView.builder(
       itemCount: infoLabels.length,
       itemBuilder: (context, index) {
+        // 部材情報（index=4）: 型式選択 + 簡易キーボード入力
+        if (index == 4) {
+          return MemberSpecTile(
+            controller: _infoControllers[index],
+            title: infoLabels[index],
+            onChanged: () => setState(() {}),
+          );
+        }
         // 材質（6番目）だけドロップダウンにする
         if (infoLabels[index] == '材質') {
           return ListTile(
@@ -1125,8 +1267,8 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
       onSave: _saveData,
       onExcelExport: _downloadExcel,
       onClearData: _clearAllData,
-      onStartStopwatch: _toggleStopwatch,
-      onStopStopwatch: _stopStopwatch,
+      onStartStopwatch: _startMeasurement,
+      onStopStopwatch: _endMeasurement,
       onResetStopwatch: _resetStopwatch,
       onRecordTime: _fillSelectedCellWithTime,
       child: Scaffold(
@@ -1233,15 +1375,15 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
                             child: const Text('Start'),
                           ),
                           ElevatedButton(
-                            onPressed: context.read<AppState>().pauseStopwatch,
+                            onPressed: context.read<AppState>().pauseActiveStopwatch,
                             child: const Text('Pause'),
                           ),
                           ElevatedButton(
-                            onPressed: context.read<AppState>().resumeStopwatch,
+                            onPressed: context.read<AppState>().resumeActiveStopwatch,
                             child: const Text('Resume'),
                           ),
                           ElevatedButton(
-                            onPressed: context.read<AppState>().stopStopwatch,
+                            onPressed: context.read<AppState>().stopActiveStopwatch,
                             child: const Text('Stop'),
                           ),
                           ElevatedButton(
@@ -1265,3 +1407,19 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

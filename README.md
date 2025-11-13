@@ -1,16 +1,171 @@
-# my_app
+# 溶接測定データ管理アプリ
 
-A new Flutter project.
+溶接作業の測定データを効率的に記録・管理するためのFlutterアプリケーションです。
 
-## Getting Started
+## 🚀 新機能・改善点
 
-This project is a starting point for a Flutter application.
+### ✨ 主要な改善
 
-A few resources to get you started if this is your first Flutter project:
+1. **自動保存機能**
+   - 2分間隔でデータを自動保存
+   - ブラウザのローカルストレージに保存
+   - 未保存の変更がある場合の視覚的フィードバック
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+2. **入力値検証**
+   - リアルタイムでの入力値チェック
+   - 各項目の適切な範囲での検証
+   - エラーメッセージの日本語表示
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+3. **キーボードショートカット**
+   - `Ctrl+S`: データ保存
+   - `Ctrl+E`: Excel出力
+   - `Ctrl+Shift+C`: データクリア
+   - `Space`: ストップウォッチ開始/停止
+   - `R`: ストップウォッチリセット
+   - `Enter`: 時間記録
+
+4. **改善されたUI/UX**
+   - Material Design 3対応
+   - より直感的なインターフェース
+   - エラー状態の視覚的表示
+   - 保存状態の表示
+
+5. **エラーハンドリング**
+   - 包括的なエラー処理
+   - ユーザーフレンドリーなエラーメッセージ
+   - データ検証機能
+
+### 📊 機能一覧
+
+#### 基本機能
+- 溶接作業情報の入力・管理
+- 測定データの記録
+- ストップウォッチ機能
+- Excelファイル出力
+
+#### データ管理
+- 自動保存（2分間隔）
+- 手動保存
+- データの読み込み
+- データクリア機能
+
+#### 入力検証
+- 温度: 0-1000度
+- 電流: 0-500A
+- 電圧: 0-50V
+- 速度: 0-100 cm/min
+- 入熱: 0-100 kJ/cm
+- 板厚: 0-100 mm
+- 溶接長: 0-1000 cm
+- 気温: -50-50度
+- 開先角度: 0-90度
+- ルート間隔: 0-20 mm
+- 積層数: 1-50
+- 時間: MM:SS形式
+
+#### 計算機能
+- 溶接時間の自動計算
+- インターバル時間の計算
+- 入熱の自動計算
+- 速度の自動計算
+
+## 🛠️ 技術仕様
+
+### 使用技術
+- **フレームワーク**: Flutter 3.4.0+
+- **言語**: Dart
+- **プラットフォーム**: Web (ブラウザ対応)
+- **状態管理**: StatefulWidget
+- **データ保存**: LocalStorage (ブラウザ)
+
+### 主要パッケージ
+- `intl`: 日付・時間フォーマット
+- `excel`: Excelファイル生成
+- `csv`: CSVファイル処理
+- `sticky_headers`: テーブルヘッダー固定
+
+## 📱 使用方法
+
+### 基本操作
+1. **情報入力**: 左側のドロワーから工事情報を入力
+2. **測定記録**: テーブルに測定データを入力
+3. **ストップウォッチ**: 時間計測と記録
+4. **データ保存**: 自動保存または手動保存
+5. **Excel出力**: データをExcelファイルとして出力
+
+### ショートカットキー
+- `Ctrl+S`: データ保存
+- `Ctrl+E`: Excel出力
+- `Ctrl+Shift+C`: データクリア
+- `Space`: ストップウォッチ開始/停止
+- `R`: ストップウォッチリセット
+- `Enter`: 選択セルに時間記録
+
+### データ検証
+- 入力時にリアルタイムで検証
+- エラーがある場合は赤色で表示
+- Excel出力時にエラー確認ダイアログ表示
+
+## 🔧 開発・ビルド
+
+### 環境構築
+```bash
+# Flutter SDKのインストール
+flutter --version
+
+# 依存関係のインストール
+flutter pub get
+
+# 開発サーバーの起動
+flutter run -d chrome
+```
+
+### ビルド
+```bash
+# Web用ビルド
+flutter build web
+
+# リリースビルド
+flutter build web --release
+```
+
+## 📁 プロジェクト構造
+
+```
+lib/
+├── main.dart                 # アプリケーションエントリーポイント
+├── screens/
+│   └── measurement_screen.dart  # メイン画面
+├── widgets/
+│   ├── measurement_table.dart   # 測定テーブル
+│   ├── stopwatch_controls.dart  # ストップウォッチ制御
+│   ├── info_form.dart          # 情報入力フォーム
+│   └── keyboard_shortcuts.dart  # キーボードショートカット
+├── services/
+│   ├── excel_exporter.dart     # Excel出力サービス
+│   └── data_storage.dart       # データ保存サービス
+└── utils/
+    └── validators.dart         # 入力値検証
+```
+
+## 🎯 今後の改善予定
+
+- [ ] データベース連携
+- [ ] ユーザー認証機能
+- [ ] データ分析・統計機能
+- [ ] テンプレート機能
+- [ ] モバイルアプリ対応
+- [ ] クラウド同期機能
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。
+
+## 🤝 貢献
+
+バグ報告や機能要望は、GitHubのIssuesでお知らせください。
+
+---
+
+**開発者**: Flutter開発チーム  
+**最終更新**: 2024年12月

@@ -1,0 +1,506 @@
+﻿// lib/ui/pages/stack_diagram_page.dart
+import 'dart:math' as math;
+import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import '../../utils/image_saver.dart';
+import 'package:provider/provider.dart';
+import '../../state/app_state.dart';
+
+class StackDiagramPage extends StatelessWidget {
+  const StackDiagramPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final s = app.settings;
+    final boundaryKey = GlobalKey();
+    Future<void> _exportPng() async {
+      try {
+        final ro = boundaryKey.currentContext?.findRenderObject();
+        if (ro is! RenderRepaintBoundary) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('エクスポート対象が見つかりません')),
+          );
+          return;
+        }
+        final ui.Image image = await ro.toImage(pixelRatio: 3.0);
+        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+        if (byteData == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('PNG生成に失敗しました')),
+          );
+          return;
+        }
+        final bytes = byteData.buffer.asUint8List();
+        if (!context.mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) {
+            return AlertDialog(
+  backgroundColor: Colors.white,
+  surfaceTintColor: Colors.white,
+  contentPadding: const EdgeInsets.all(8),
+  content: ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 600, maxHeight: 600),
+    child: DecoratedBox(
+      decoration: const BoxDecoration(color: Colors.white),
+      child: InteractiveViewer(
+        child: Image.memory(bytes),
+      ),
+    ),
+  ),
+  actions: [
+    TextButton(
+      onPressed: () => Navigator.of(ctx).pop(),
+      child: const Text('閉じる'),
+    ),
+    TextButton(
+      onPressed: () async {
+        final filename = 'stack_diagram_.png';
+        await savePng(bytes, filename, mimeType: 'image/png');
+        if (ctx.mounted) Navigator.of(ctx).pop();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('保存しました: ')),
+          );
+        }
+      },
+      child: const Text('保存'),
+    ),
+  ],
+);
+                    if (ctx.mounted) Navigator.of(ctx).pop();
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('保存しました: $filename')),
+                      );
+                    }
+                  },
+                  child: const Text('保存'),
+                ),
+              ],
+            );
+          },
+        );
+      } catch (e) {
+        if (!context.mounted) return; 
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エクスポート失敗: $e')),
+        );
+      }
+    }
+
+    // 譁・ｭ怜・縺九ｉ隗貞ｺｦ/蟇ｸ豕輔ｒ謚ｽ蜃ｺ・・35ﾂｰ", "2mm" 縺ｪ縺ｩ繧呈Φ螳夲ｼ・
+    double _parseAngleDeg(String? s) {
+      if (s == null) return 35;
+      final v = RegExp(r'[\d.]+').firstMatch(s)?.group(0);
+      return v == null ? 35 : double.tryParse(v) ?? 35;
+    }
+
+    double _parseMm(String? s, double def) {
+      if (s == null) return def;
+      final v = RegExp(r'[\d.]+').firstMatch(s)?.group(0);
+      return v == null ? def : double.tryParse(v) ?? def;
+    }
+
+    // 笘・ｯｸ豕輔ヱ繝ｩ繝｡繝ｼ繧ｿ・・m・・
+    final thicknessMm =
+        s.location != null && double.tryParse(s.location!) != null
+            ? double.parse(s.location!) // 繧ゅ＠菴咲ｽｮ縺ｫ謨ｰ蛟､繧貞・繧後※縺・ｋ縺ｪ繧牙ｿ懈･縺ｧ菴ｿ逕ｨ蜿ｯ
+            : 25.0; // 譚ｿ蜴・譌｢螳壼､)縲ょｾ後〒 JobSettings 縺ｫ thickness 繧呈ｭ｣蠑剰ｿｽ蜉縺励※鄂ｮ謠帙＠縺ｦ縺上□縺輔＞
+    final grooveAngleDeg = _parseAngleDeg(s.grooveAngle); // 萓・ "35ﾂｰ"
+    final rootGapMm = _parseMm(s.rootGap, 2); // 萓・ "2mm"
+        // Build per-row heights and split counts (vertical split within each row)
+    final passes = app.passes;
+    int _parseLayerCount(String? s) {
+      if (s == null) return 1;
+      // Extract ASCII digits, mapping full-width digits (U+FF10..FF19)
+      final sb = StringBuffer();
+      for (final r in s.runes) {
+        if (r >= 0x30 && r <= 0x39) {
+          sb.writeCharCode(r);
+        } else if (r >= 0xFF10 && r <= 0xFF19) {
+          sb.writeCharCode(r - 0xFF10 + 0x30);
+        }
+      }
+      final digitsOnly = sb.toString();
+      final m = RegExp(r"[0-9]+").firstMatch(digitsOnly);
+      if (m == null) return 1;
+      final n = int.tryParse(m.group(0)!);
+      return (n == null || n < 1) ? 1 : n;
+    }
+    // Sequentially group passes into layers according to the first pass's パス/層 value
+    final splitCounts = <int>[];
+    final passNumbers = <int>[]; // flattened per-split pass numbers
+    int iPass = 0;
+    while (iPass < passes.length) {
+      final split = _parseLayerCount(passes[iPass].passLayer).clamp(1, 3);
+      final cnt = math.min(split, passes.length - iPass);
+      splitCounts.add(cnt);
+      for (int k = 0; k < cnt; k++) {
+        passNumbers.add(passes[iPass + k].index);
+      }
+      iPass += cnt;
+    }
+      final rowCount = splitCounts.length;
+      final rowHeights = List<double>.generate(
+        rowCount,
+        (k) => thicknessMm / (rowCount + 1) * (1 + k * 0.05),
+      );
+
+    // passNumbers already built as flattened sequence above
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: const Text('Stack Diagram'),
+        actions: [
+          IconButton(
+            tooltip: 'PNG出力 (背景透過)',
+            icon: const Icon(Icons.download),
+            onPressed: _exportPng,
+          ),
+        ],
+      ),
+      body: LayoutBuilder(
+        builder: (context, c) {
+          // 菴咏區繧貞性繧√◆繧ｭ繝｣繝ｳ繝舌せ縲よｨｪ400縲懃ｸｦ(譚ｿ蜴堙励せ繧ｱ繝ｼ繝ｫ)繧貞渕譛ｬ縺ｫ閾ｪ蜍輔せ繧ｱ繝ｼ繝ｫ
+          final size = Size(c.maxWidth, c.maxHeight);
+          return RepaintBoundary(
+            key: boundaryKey,
+            child: ColoredBox(
+              color: Colors.transparent,
+              child: CustomPaint(
+                size: size,
+                painter: _SingleBevelPainter(
+                  thicknessMm: thicknessMm,
+                  grooveAngleDeg: grooveAngleDeg,
+                  rootGapMm: rootGapMm,
+                  rowHeights: rowHeights,
+                  splitCounts: splitCounts,
+                  passNumbers: passNumbers,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// 迚・・髢句・・亥ｷｦ蛛ｴ蝙ら峩縲∝承蛛ｴ縺後・繝吶Ν髱｢・峨ｒ謠上￥繝壹う繝ｳ繧ｿ
+class _SingleBevelPainter extends CustomPainter {
+    final double thicknessMm; // 板厚
+  final double grooveAngleDeg; // 開先角度
+  final double rootGapMm; // ルート間隔
+  final List<double> rowHeights;
+  final List<int> splitCounts;
+  final List<int> passNumbers;
+
+  _SingleBevelPainter({
+    required this.thicknessMm,
+    required this.grooveAngleDeg,
+    required this.rootGapMm,
+    required this.rowHeights,
+    required this.splitCounts,
+    required this.passNumbers,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cs = ThemeData.fallback().colorScheme;
+    final paintLine = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.butt
+      ..strokeJoin = StrokeJoin.miter
+      ..strokeMiterLimit = 2.0;
+
+    final paintWeld = Paint()
+      ..color = Colors.transparent
+      ..style = PaintingStyle.fill;
+
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      textAlign: TextAlign.center,
+    );
+
+    // ========== 繧ｹ繧ｱ繝ｼ繝ｫ險ｭ螳・==========
+    // 荳贋ｸ句ｷｦ蜿ｳ縺ｮ菴咏區・・x・・
+    const margin = 24.0;
+    final usableW = size.width - margin * 2;
+    final usableH = size.height - margin * 2;
+
+    // px/mm 繧ｹ繧ｱ繝ｼ繝ｫ・育ｸｦ譁ｹ蜷代′蝓ｺ貅厄ｼ・
+    // 譚ｿ蜴・thicknessMm)繧・usableH 縺ｮ 70% 縺ｫ蜿弱ａ繧・
+    double pxPerMm = (usableH * .7) / thicknessMm;
+    Offset origin = Offset(margin, size.height - margin); // 左下原点（後で再計算）
+
+    // ========== 蟷ｾ菴輔・蜑肴署 ==========
+    // 蟾ｦ譚ｿ・噎 = 0 縺ｮ蝙ら峩髱｢
+    // 蜿ｳ譚ｿ・壹・繝吶Ν髱｢・域攸荳顔ｫｯ縺九ｉ rootGap 縺ｮ荳狗ｫｯ縺ｸ蜷代°縺・峩邱夲ｼ・
+    // 繝吶・繝ｫ隗偵・縲梧攸陦ｨ髱｢縺九ｉ縺ｮ隗貞ｺｦ縲阪→隕九↑縺励√％縺薙〒縺ｯ
+    //   繝吶・繝ｫ髱｢縺ｮ蛯ｾ縺・= tan(theta) 繧呈ｭ｣縺ｫ蜿悶ｊ縲∽ｸ顔ｫｯ縺九ｉ荳区婿縺ｫ蜷代°縺・・
+    final theta = grooveAngleDeg * math.pi / 180.0;
+
+    // 荳顔ｫｯ縺ｮ縲悟ｷｦ蜿ｳ縺ｮ譚ｿ縺ｮ霍晞屬縲搾ｼ磯幕蜈亥ｹ・ｼ峨ｒ rootGap 縺九ｉ隗貞ｺｦ縺ｧ驕｡縺｣縺ｦ險育ｮ・
+    // 繝吶・繝ｫ髱｢縺ｮ讓ｪ譁ｹ蜷第・蛻・ x = (thicknessMm) * tan(theta)
+    final bevelOffsetXmm = thicknessMm * math.tan(theta); // 蜿ｳ譚ｿ荳顔ｫｯ縺悟ｷｦ譚ｿ荳顔ｫｯ繧医ｊ縺ｩ繧後□縺大承縺・
+    final topGapMm = rootGapMm + bevelOffsetXmm;
+
+    // 荳ｻ隕∫せ・・m蠎ｧ讓・竊・譛蠕後↓px縺ｸ螟画鋤・・
+    final leftTop = Offset(0, thicknessMm);
+    final leftBottom = const Offset(0, 0);
+
+    final rightTop = Offset(topGapMm, thicknessMm);
+    final rightBottom = Offset(rootGapMm, 0);
+
+    // 縺薙％縺ｧ繧ｹ繧ｱ繝ｼ繝ｫ繧貞・隱ｿ謨ｴ縺励※縲∫ｸｦ讓ｪ縺ｨ繧ゅ↓逕ｻ髱｢蜀・↓蜿弱∪繧九ｈ縺・↓縺吶ｋ
+    final leftBoundMm = 0.0; // 寸法線なし
+    final rightBoundMm = topGapMm;
+    final widthMm = (rightBoundMm - leftBoundMm).clamp(0.0, double.infinity);
+    final heightMm = (thicknessMm + 8.0).clamp(0.0, double.infinity); // 上部寸法線の余裕
+    final pxPerMmH = widthMm == 0 ? 0.0 : (usableW / widthMm);
+    final pxPerMmV = heightMm == 0 ? 0.0 : (usableH / heightMm);
+    pxPerMm = math.max(0.0, math.min(pxPerMmH, pxPerMmV));
+    final contentWpx = widthMm * pxPerMm;
+    final padPx = (usableW - contentWpx) / 2;
+    origin = Offset(
+      margin + padPx - leftBoundMm * pxPerMm,
+      size.height - margin,
+    );
+
+    // ========== 蠖｢迥ｶ繧呈緒逕ｻ ==========
+    Path toCanvasPath(Path pMm) {
+      // mm蠎ｧ讓吶ｒ繧ｭ繝｣繝ｳ繝舌せpx縺ｸ・亥ｷｦ荳・origin縲〆縺ｯ荳雁髄縺搾ｼ・
+      final m = Matrix4.identity()
+        ..translate(origin.dx, origin.dy)
+        ..scale(pxPerMm, -pxPerMm);
+      return pMm.transform(m.storage);
+    }
+
+    // 1) 豈肴攝螟門ｽ｢・域妙髱｢・・
+        final base = Path()
+      ..moveTo(leftBottom.dx, leftBottom.dy)
+      ..lineTo(leftTop.dx, leftTop.dy);
+    canvas.drawPath(toCanvasPath(base), paintLine);
+
+    // 繝吶・繝ｫ髱｢
+    // ベベル面 + 上端水平延長を同一パスで描画（ジョインずれ防止)
+    final double extPx = 16.0;
+    final double extMm = pxPerMm > 0 ? extPx / pxPerMm : 1.0;
+    final bevel = Path()
+      ..moveTo(rightBottom.dx, rightBottom.dy)
+      ..lineTo(rightTop.dx, rightTop.dy)
+      // 上の水平延長は描画しない
+      ..moveTo(rightBottom.dx, rightBottom.dy)
+      ..lineTo(leftBottom.dx, leftBottom.dy);
+    canvas.drawPath(toCanvasPath(bevel), paintLine);
+    // 下端の水平延長は同一パスで描画済み
+
+    // 2) 螻､・域ｺｶ謗･驥大ｱ橸ｼ峨ｒ鬆・↓繧｢繝ｼ繧ｯ縺｣縺ｽ縺剰ｿ台ｼｼ縺励※蝪励ｋ
+    // 蜷・ｱ､縺ｮ鬮倥＆驟榊・・医す繝ｳ繝励Ν譯茨ｼ壽攸蜴壹ｒ螻､謨ｰ+1縺ｧ蜑ｲ縺｣縺ｦ蠕舌・↓蜴壹￥・・
+    final layerHeights = rowHeights;
+
+    int labelIndex = 0;
+    double accH = 0.0;
+    for (int i = 0; i < layerHeights.length; i++) {
+      final hRow = layerHeights[i];
+      final y0 = accH;
+      final y1 = accH + hRow;
+      accH = y1.clamp(0.0, thicknessMm).toDouble();
+
+      final parts = (i < splitCounts.length && splitCounts[i] > 0) ? splitCounts[i] : 1;
+
+      // 横方向の分割: 行の下端/上端における開先幅を等分
+      final xFullBottom = rootGapMm + y0 * math.tan(theta);
+      final xFullTop = rootGapMm + y1 * math.tan(theta);
+
+      for (int k = 0; k < parts; k++) {
+        final double alpha0 = k / parts;
+        final double alpha1 = (k + 1) / parts;
+
+        final double xLBot = alpha0 * xFullBottom;
+        final double xLTop = alpha0 * xFullTop;
+        final double xRBot = alpha1 * xFullBottom;
+        final double xRTop = alpha1 * xFullTop;
+        // keep arch inside row top
+
+        final p = Path()
+          ..moveTo(xLBot, y0)
+          ..lineTo(xLTop, y1);
+
+        final midX = xLTop + (xRTop - xLTop) * 0.6;
+        final ctrl = Offset(midX, y1 + hRow * .35);
+
+        p.quadraticBezierTo(ctrl.dx, ctrl.dy, xRTop, y1);
+        p.lineTo(xRBot, y0);
+        p.close();
+
+        canvas.drawPath(toCanvasPath(p), paintWeld);
+
+        // omit bottom edge; vertical sides end at just above lower arch
+        final double epsMm = 0.75 / pxPerMm;
+        final double y0Adj = (y0 + epsMm).clamp(0.0, thicknessMm).toDouble();
+        final stroke = Path()
+          ..moveTo(xLBot, y0Adj)
+          ..lineTo(xLTop, y1)
+          ..quadraticBezierTo(ctrl.dx, ctrl.dy, xRTop, y1)
+          ..lineTo(xRBot, y0Adj);
+        canvas.drawPath(toCanvasPath(stroke), paintLine);
+
+        // Dynamic label sizing based on split area
+        final widthPx = (xRTop - xLTop) * pxPerMm;
+        final heightPx = (y1 - y0) * pxPerMm;
+        final fontPx = math.max(12.0, math.min(28.0, 0.5 * math.min(widthPx, heightPx)));
+
+        final labelPos = Offset(
+          xLTop + (xRTop - xLTop) * .5,
+          (y0 + y1) / 2,
+        );
+        // Sequential pass numbering across splits, left-to-right, top-to-bottom
+        final labelText = (labelIndex < passNumbers.length)
+            ? '${passNumbers[labelIndex]}'
+            : '${labelIndex + 1}';
+        tp.text = TextSpan(
+          text: labelText,
+          style: TextStyle(fontSize: fontPx, color: Colors.black, fontWeight: FontWeight.w600),
+        );
+        tp.layout();
+        final labelPx = _mmToPx(labelPos, origin, pxPerMm);
+        tp.paint(canvas, labelPx - Offset(tp.width / 2, tp.height / 2));
+        labelIndex++;
+      }
+    }
+
+    // 蟇ｸ豕慕ｷ夲ｼ井ｸ企Κ髢句・蟷・ｼ・
+    }
+
+  Offset _mmToPx(Offset mm, Offset origin, double pxPerMm) {
+    return Offset(origin.dx + mm.dx * pxPerMm, origin.dy - mm.dy * pxPerMm);
+  }
+
+  void _drawDimensionV({
+    required Canvas canvas,
+    required Offset origin,
+    required double pxPerMm,
+    required double xMm,
+    required double y0Mm,
+    required double y1Mm,
+    required String text,
+  }) {
+    final p = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 1;
+    final a = _mmToPx(Offset(xMm, y0Mm), origin, pxPerMm);
+    final b = _mmToPx(Offset(xMm, y1Mm), origin, pxPerMm);
+    canvas.drawLine(a, b, p);
+    canvas.drawLine(a, a + const Offset(-8, 0), p);
+    canvas.drawLine(b, b + const Offset(-8, 0), p);
+
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(style: const TextStyle(color: Colors.black), text: text),
+    )..layout();
+    tp.paint(canvas, Offset(a.dx + 10, (a.dy + b.dy) / 2 - tp.height / 2));
+  }
+
+  void _drawDimensionH({
+    required Canvas canvas,
+    required Offset origin,
+    required double pxPerMm,
+    required double yMm,
+    required double x0Mm,
+    required double x1Mm,
+    required String text,
+  }) {
+    final p = Paint()
+      ..color = Colors.black
+      ..strokeWidth = 1;
+    final a = _mmToPx(Offset(x0Mm, yMm), origin, pxPerMm);
+    final b = _mmToPx(Offset(x1Mm, yMm), origin, pxPerMm);
+    canvas.drawLine(a, b, p);
+    canvas.drawLine(a, a + const Offset(0, -8), p);
+    canvas.drawLine(b, b + const Offset(0, -8), p);
+
+    final tp = TextPainter(
+      textDirection: TextDirection.ltr,
+      text: TextSpan(style: const TextStyle(color: Colors.black), text: text),
+    )..layout();
+    tp.paint(canvas, Offset((a.dx + b.dx) / 2 - tp.width / 2, a.dy - 20));
+  }
+
+  @override
+  @override
+  bool shouldRepaint(covariant _SingleBevelPainter old) {
+    if (thicknessMm != old.thicknessMm ||
+        grooveAngleDeg != old.grooveAngleDeg ||
+        rootGapMm != old.rootGapMm) {
+      return true;
+    }
+    if (rowHeights.length != old.rowHeights.length) return true;
+    for (int i = 0; i < rowHeights.length; i++) {
+      if ((rowHeights[i] - old.rowHeights[i]).abs() > 1e-6) return true;
+    }
+    if (splitCounts.length != old.splitCounts.length) return true;
+    for (int i = 0; i < splitCounts.length; i++) {
+      if (splitCounts[i] != old.splitCounts[i]) return true;
+    }
+    if (passNumbers.length != old.passNumbers.length) return true;
+    for (int i = 0; i < passNumbers.length; i++) {
+      if (passNumbers[i] != old.passNumbers[i]) return true;
+    }
+    return false;
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,10 @@
+// Top-level build file for the Android project.
+// Repositories and plugin versions are managed in settings.gradle (plugins {} / dependencyResolutionManagement {}).
+// Top-level build file for the Android project.
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}

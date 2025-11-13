@@ -1,0 +1,94 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'ui/main_scaffold.dart';
+import 'state/app_state.dart';
+
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 繧ｷ繧ｹ繝・ΒUI縺ｮ險ｭ螳・  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
+
+  runApp(const MyApp());
+
+  final now = DateTime.now();
+  final formatter = DateFormat('yyyy-MM-dd HH:mm:ss');
+  final formatted = formatter.format(now);
+  print('繧｢繝励Μ襍ｷ蜍墓凾蛻ｻ: $formatted');
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (context) => AppState(),
+      child: MaterialApp(
+        title: '貅ｶ謗･貂ｬ螳壹ョ繝ｼ繧ｿ邂｡逅・,
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF4169E1),
+            brightness: Brightness.light,
+          ),
+          // 逶ｮ縺ｫ隕九∴繧九ユ繝ｼ繝櫁牡縺ｮ蜿肴丐・・ppBar/Buttons/NavBar・・          appBarTheme: const AppBarTheme(
+            elevation: 0,
+            centerTitle: true,
+            backgroundColor: Color(0xFF4169E1),
+            foregroundColor: Colors.white,
+            titleTextStyle: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              elevation: 2,
+              backgroundColor: const Color(0xFF4169E1),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+          ),
+          navigationBarTheme: const NavigationBarThemeData(
+            indicatorColor: Color(0x1F4169E1),
+            backgroundColor: Colors.white,
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Colors.grey),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF4169E1), width: 2),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          cardTheme: const CardThemeData(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
+          ),
+        ),
+        home: const MainScaffold(),
+      ),
+    );
+  }
+}
+

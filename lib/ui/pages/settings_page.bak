@@ -1,0 +1,385 @@
+﻿// lib/ui/pages/settings_page.dart
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../state/app_state.dart';
+import '../../screens/steel_setting_tab.dart'; // 笘・H蠖｢驪ｼ繧ｻ繝ｬ繧ｯ繧ｿ
+
+class SettingsPage extends StatefulWidget {
+  const SettingsPage({super.key});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  final _formKey = GlobalKey<FormState>();
+
+  // Dropdown 蛟呵｣懶ｼ亥ｿ・ｦ√↓蠢懊§縺ｦ邱ｨ髮・庄・・
+  static const _materials = ['SS400', 'SN400B', 'SN490A', 'SN490B'];
+  static const _grooveAngles = ['35ﾂｰ', '45ﾂｰ', '60ﾂｰ'];
+  static const _rootGaps = ['5mm', '6mm', '7mm', '8mm'];
+  static const _postures = ['\\u4e0b\\u5411', '\\u6a2a\\u5411'];
+  // 髟ｷ縺募・蜉幢ｼ・m・・  late final TextEditingController _weldingLengthCtl;
+
+  // TextField 逕ｨ縺ｮ繧ｳ繝ｳ繝医Ο繝ｼ繝ｩ
+  late final TextEditingController _projectNameCtl;
+  late final TextEditingController _productCodeCtl;
+  late final TextEditingController _locationCtl;
+  late final TextEditingController _partCtl;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = context.read<AppState>().settings;
+    _projectNameCtl = TextEditingController(text: s.projectName ?? '');
+    _productCodeCtl = TextEditingController(text: s.productCode ?? '');
+    _locationCtl = TextEditingController(text: s.location ?? '');
+    _partCtl = TextEditingController(text: s.part ?? '');
+    _weldingLengthCtl = TextEditingController(
+        text: s.weldingLengthCm != null ? s.weldingLengthCm!.toString() : '');
+  }
+
+  @override
+  void dispose() {
+    _projectNameCtl.dispose();
+    _productCodeCtl.dispose();
+    _locationCtl.dispose();
+    _partCtl.dispose();
+    _weldingLengthCtl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = context.watch<AppState>();
+    final s = app.settings;
+
+    // 蜈ｱ騾壹・陬・｣ｾ
+    const fieldBorder = OutlineInputBorder();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Conditions'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Copy previous',
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Not implemented')),
+              );
+            },
+          ),
+        ],
+      ),
+            },
+          ),
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            // ===== 蟾･莠区ュ蝣ｱ =====
+            _SectionCard(
+              icon: Icons.business,
+              title: '蟾･莠区ュ蝣ｱ',
+              initiallyExpanded: true,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _projectNameCtl,
+                    decoration: const InputDecoration(
+                      labelText: '蟾･莠句錐 *',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (v) {
+                      app.setProjectName(v.isEmpty ? null : v);
+                      app.scheduleAutosave();
+                    },
+                    validator: (v) =>
+                    validator: (v) =>
+                        (v == null || v.isEmpty) ? 'Required' : null,
+                  const SizedBox(height: 12),
+                  _DatePickerRow(
+                    label: '貂ｬ螳壽律 *',
+                    date: s.measurementDate,
+                    onPick: (picked) {
+                      app.setMeasurementDate(picked);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _weldingLengthCtl,
+                    decoration: const InputDecoration(
+                      labelText: '貅ｶ謗･髟ｷ (cm)',
+                      border: fieldBorder,
+                    ),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (v) {
+                      final d = double.tryParse(v);
+                      app.setWeldingLengthCm(d);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _productCodeCtl,
+                    decoration: const InputDecoration(
+                      labelText: '陬ｽ蜩∫ｬｦ蜿ｷ',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (v) {
+                      app.setProductCode(v.isEmpty ? null : v);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _locationCtl,
+                    decoration: const InputDecoration(
+                      labelText: '菴咲ｽｮ',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (v) {
+                      app.setLocation(v.isEmpty ? null : v);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // ===== 驛ｨ譚先ュ蝣ｱ =====
+            _SectionCard(
+              icon: Icons.precision_manufacturing,
+              title: '驛ｨ譚先ュ蝣ｱ',
+              initiallyExpanded: true,
+              child: Column(
+                children: [
+                  // 笆ｼ笆ｼ 縺薙％繧偵後ち繝・・縺ｧ驕ｸ謚槭阪↓螟画峩 笆ｼ笆ｼ
+                  InkWell(
+                    onTap: () async {
+                      final selected = await Navigator.push<String>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SteelSettingTab(),
+                        ),
+                      );
+                      if (selected != null && selected.isNotEmpty) {
+                        _partCtl.text = selected; // 逕ｻ髱｢陦ｨ遉ｺ繧呈峩譁ｰ
+                        app.setComponent(selected); // AppState 縺ｫ蜿肴丐
+                        app.scheduleAutosave();
+                      }
+                    },
+                    child: IgnorePointer(
+                      // 繧ｭ繝ｼ繝懊・繝峨ｒ蜃ｺ縺輔↑縺・
+                      child: TextFormField(
+                        controller: _partCtl,
+                        readOnly: true,
+                        decoration: const InputDecoration(
+                          labelText: '驛ｨ譚・*・医ち繝・・縺励※驕ｸ謚橸ｼ・,
+                          labelText: 'Component *',
+                          suffixIcon: Icon(Icons.expand_more),
+                        ),
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? '蠢・磯・岼縺ｧ縺・ : null,
+                            (v == null || v.isEmpty) ? 'Required' : null,
+                    ),
+                  ),
+                  // 笆ｲ笆ｲ 縺薙％縺ｾ縺ｧ螟画峩 笆ｲ笆ｲ
+
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: s.material != null && _materials.contains(s.material)
+                        ? s.material
+                        : null,
+                    items: _materials
+                        .map(
+                          (m) => DropdownMenuItem(
+                            value: m,
+                            child: Text(m),
+                          ),
+                        )
+                        .toList(),
+                    decoration: const InputDecoration(
+                      labelText: '譚占ｳｪ',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (val) {
+                      app.setMaterial(val);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // ===== 譁ｽ蟾･譚｡莉ｶ =====
+            _SectionCard(
+              icon: Icons.construction,
+              title: '譁ｽ蟾･譚｡莉ｶ',
+              initiallyExpanded: false,
+              child: Column(
+                children: [
+                  DropdownButtonFormField<String>(
+                    value: s.grooveAngle != null &&
+                            _grooveAngles.contains(s.grooveAngle)
+                        ? s.grooveAngle
+                        : null,
+                    items: _grooveAngles
+                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                        .toList(),
+                    decoration: const InputDecoration(
+                      labelText: '髢句・隗貞ｺｦ',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (val) {
+                      app.setGrooveAngle(val);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: s.rootGap != null && _rootGaps.contains(s.rootGap)
+                        ? s.rootGap
+                        : null,
+                    items: _rootGaps
+                        .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                        .toList(),
+                    decoration: const InputDecoration(
+                      labelText: '繝ｫ繝ｼ繝磯俣髫・,
+                      labelText: 'Root gap',
+                    ),
+                    onChanged: (val) {
+                      app.setRootGap(val);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: s.posture != null && _postures.contains(s.posture)
+                        ? s.posture
+                        : null,
+                    items: _postures
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p)))
+                        .toList(),
+                    decoration: const InputDecoration(
+                      labelText: '貅ｶ謗･蟋ｿ蜍｢',
+                      border: fieldBorder,
+                    ),
+                    onChanged: (val) {
+                      app.setWeldingPosition(val);
+                      app.scheduleAutosave();
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 72), // FAB縺ｨ蟷ｲ貂峨＠縺ｪ縺・ｽ咏區
+          ],
+        ),
+      ),
+
+      // 蜿ｳ荳九↓菫晏ｭ倥・繧ｿ繝ｳ・郁ｦ九◆逶ｮ逕ｨ縲ょｮ溷・逅・・ autosave 貂医∩縺ｧ繧０K・・
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.save),
+        label: const Text('菫晏ｭ・),
+        label: const Text('Save'),
+          if (_formKey.currentState?.validate() ?? false) {
+            ScaffoldMessenger.of(context).showSnackBar(\n              const SnackBar(content: Text('Not implemented')),\n            );
+          }
+        },
+      ),
+    );
+  }
+}
+
+/// 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ逕ｨ縺ｮ蜈ｱ騾咾ard+ExpansionTile
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.icon,
+    required this.title,
+    required this.child,
+    this.initiallyExpanded = true,
+  });
+
+  final IconData icon;
+  final String title;
+  final Widget child;
+  final bool initiallyExpanded;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        leading: Icon(icon),
+        title: Text(title,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        children: [
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// 貂ｬ螳壽律縺ｮ繝斐ャ繧ｫ繝ｼ陦鯉ｼ・3縺｣縺ｽ縺上す繝ｳ繝励Ν縺ｫ・・
+class _DatePickerRow extends StatelessWidget {
+  const _DatePickerRow({
+    required this.label,
+    required this.date,
+    required this.onPick,
+  });
+
+  final String label;
+  final DateTime date;
+  final ValueChanged<DateTime> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final dateStr = '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Text(label, style: textTheme.titleSmall),
+          const Spacer(),
+          Text(dateStr, style: textTheme.bodyLarge),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: date,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) onPick(picked);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
+
+
+
+

@@ -1,0 +1,19 @@
+*** Begin Patch
+*** Update File: lib/ui/pages/measure_page.dart
+@@
+   void _onTick(Duration elapsed) {
+     // ?Z?`E????????g??????????h?F???s???? (now - start) - totalPause?A??~/????~???? totalWork
+     final app = context.read<AppState>();
+-    final secs = app.globalElapsedAt(DateTime.now()).inSeconds;
++    // 秒の表示は四捨五入で統一（ストップウォッチと各時間のズレ抑制）
++    final ms = app.globalElapsedAt(DateTime.now()).inMilliseconds;
++    final secs = (ms / 1000.0).round();
+     final mm = (secs ~/ 60).toString().padLeft(2, '0');
+     final ss = (secs % 60).toString().padLeft(2, '0');
+     if (mounted) {
+       setState(() {
+         _displayTime = '$mm:$ss';
+       });
+     }
+   }
+*** End Patch
