@@ -21,9 +21,9 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('\u78BA\u8A8D\u30FB\u51FA\u529B'),
+        title: const Text('確認・出力'),
         actions: [
-          // Filter button
+          // 未入力のみ表示の切り替えボタン
           IconButton(
             onPressed: () {
               setState(() {
@@ -34,23 +34,22 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
               _showOnlyEmpty ? Icons.filter_list : Icons.filter_list_outlined,
               color: _showOnlyEmpty ? Colors.blue : null,
             ),
-            tooltip: '\u672A\u5165\u529B\u306E\u307F\u8868\u793A',
+            tooltip: '未入力のみ表示',
           ),
-          // Excel export button
-          // Excel export button
+          // Excel 出力ボタン（現在はダミー）
           IconButton(
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Excel\\u51FA\\u529B\\u306F\\u672A\\u5B9F\\u88C5\\u3067\\u3059'),
+                  content: Text('Excel出力は未実装です'),
                 ),
               );
             },
             icon: const Icon(Icons.table_chart),
-            tooltip: 'Excel\\u51FA\\u529B',
+            tooltip: 'Excel出力',
           ),
-         ],
-       ),
+        ],
+      ),
       body: Consumer<AppState>(
         builder: (context, appState, child) {
           final passes = _showOnlyEmpty
@@ -84,203 +83,207 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
                   headingRowHeight: 32.0,
                   dataRowMinHeight: 28.0,
                   dataRowMaxHeight: 32.0,
-
-                  columns: [
-                  // Fixed first column
-                  const DataColumn(
-                    label: Text('\u30D1\u30B9'),
-                    numeric: true,
-                  ),
-                  // Editable columns
-                  const DataColumn(
-                    label: Text(
-                      '\u958B\u59CB\n\u6E29\u5EA6',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                  columns: const [
+                    DataColumn(
+                      label: Text('パス'),
+                      numeric: true,
                     ),
-                  ),
-                  const DataColumn(
-                    label: Text(
-                      '\u7D42\u4E86\n\u6E29\u5EA6',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                    DataColumn(
+                      label: Text(
+                        '開始\n温度',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  const DataColumn(label: Text('\u96FB\u6D41')),
-                  const DataColumn(label: Text('\u96FB\u5727')),
-                  const DataColumn(
-                    label: Text(
-                      '\u5165\u71B1\nkJ/cm',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                    DataColumn(
+                      label: Text(
+                        '終了\n温度',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  // Readonly computed columns
-                  const DataColumn(
-                    label: Text(
-                      '\u6EB6\u63A5\n\u6642\u9593',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                    DataColumn(label: Text('電流')),
+                    DataColumn(label: Text('電圧')),
+                    DataColumn(
+                      label: Text(
+                        '入熱\nkJ/cm',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  const DataColumn(
-                    label: Text(
-                      '\u505C\u6B62\n\u6642\u9593',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                    DataColumn(
+                      label: Text(
+                        '溶接\n時間',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  const DataColumn(
-                    label: Text(
-                      '\u6EB6\u63A5\u901F\u5EA6\ncm/min',
-                      textAlign: TextAlign.center,
-                      softWrap: true,
-                      maxLines: 2,
+                    DataColumn(
+                      label: Text(
+                        '停止\n時間',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
                     ),
-                  ),
-                  const DataColumn(label: Text('\u30D1\u30B9/\u5C64')),
-                  const DataColumn(label: Text('\u30B9\u30E9\u30B0')),
-                  const DataColumn(label: Text('\u5099\u8003')),
-                ],
-
-                rows: passes.map((pass) {
-                  return DataRow(
-                    cells: [
-                      // Pass number (fixed column) - clickable to navigate
-                      DataCell(
-                        InkWell(
-                          onTap: () {
-                            final passIndex = appState.passes.indexOf(pass);
-                            if (passIndex != -1) {
-                              appState.setCurrentPassIndex(passIndex);
-                              widget.onNavigateToMeasureTab(
-                                  1); // Navigate to MeasurePage tab
-                            }
-                          },
-                          child: Text(
-                            '${pass.index}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue,
-                              decoration: TextDecoration.underline,
+                    DataColumn(
+                      label: Text(
+                        '溶接速度\ncm/min',
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        maxLines: 2,
+                      ),
+                    ),
+                    DataColumn(label: Text('パス/層')),
+                    DataColumn(label: Text('スラグ')),
+                    DataColumn(label: Text('備考')),
+                  ],
+                  rows: passes.map((pass) {
+                    return DataRow(
+                      cells: [
+                        // パス番号（クリックで測定タブへ）
+                        DataCell(
+                          InkWell(
+                            onTap: () {
+                              final passIndex = appState.passes.indexOf(pass);
+                              if (passIndex != -1) {
+                                appState.setCurrentPassIndex(passIndex);
+                                widget.onNavigateToMeasureTab(1);
+                              }
+                            },
+                            child: Text(
+                              '${pass.index}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      // Editable temperature fields
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.tStart?.toString() ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'tStart', value),
-                        ),
-                      ),
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.tEnd?.toString() ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'tEnd', value),
-                        ),
-                      ),
-                      // Editable electrical fields
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.amps?.toString() ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'amps', value),
-                        ),
-                      ),
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          (pass.volts == null ? '' : pass.volts!.toDouble().toStringAsFixed(1)),
-                          (value) => _updatePassField(
-                              appState, pass.index, 'volts', value),
-                        ),
-                      ),
-                      DataCell(
-                        Text(
-                          pass.heatInput == null
-                              ? '--'
-                              : '${_trimNum(pass.heatInput!)} kJ/cm',
-                          style: TextStyle(
-                            color: pass.heatInput == null
-                                ? Colors.grey
-                                : Colors.black87,
+                        // 開始温度
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.tStart?.toString() ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'tStart', value),
                           ),
                         ),
-                      ),
-                      // Readonly computed fields (bind to model)
-                      DataCell(
-                        Text(
-                          _formatWeldTime(pass.weldTimeSec),
-                          style: TextStyle(
-                            color: pass.weldTimeSec == null
-                                ? Colors.grey
-                                : Colors.black87,
+                        // 終了温度
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.tEnd?.toString() ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'tEnd', value),
                           ),
                         ),
-                      ),
-                      DataCell(
-                        Text(
-                          _formatWeldTime(pass.pauseSec),
-                          style: TextStyle(
-                            color: pass.pauseSec == null
-                                ? Colors.grey
-                                : Colors.black87,
+                        // 電流
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.amps?.toString() ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'amps', value),
                           ),
                         ),
-                      ),
-                      DataCell(
-                        Text(
-                          pass.speed == null
-                              ? '--'
-                              : '${_trimNum(pass.speed!)} cm/min',
-                          style: TextStyle(
-                            color: pass.speed == null
-                                ? Colors.grey
-                                : Colors.black87,
+                        // 電圧
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.volts == null
+                                ? ''
+                                : pass.volts!.toDouble().toStringAsFixed(1),
+                            (value) => _updatePassField(
+                                appState, pass.index, 'volts', value),
                           ),
                         ),
-                      ),
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.passLayer ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'passLayer', value),
+                        // 入熱
+                        DataCell(
+                          Text(
+                            pass.heatInput == null
+                                ? '--'
+                                : '${_trimNum(pass.heatInput!)} kJ/cm',
+                            style: TextStyle(
+                              color: pass.heatInput == null
+                                  ? Colors.grey
+                                  : Colors.black87,
+                            ),
+                          ),
                         ),
-                      ),
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.slag ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'slag', value),
+                        // 溶接時間
+                        DataCell(
+                          Text(
+                            _formatWeldTime(pass.weldTimeSec),
+                            style: TextStyle(
+                              color: pass.weldTimeSec == null
+                                  ? Colors.grey
+                                  : Colors.black87,
+                            ),
+                          ),
                         ),
-                      ),
-                      DataCell(
-                        _buildEditableCell(
-                          context,
-                          pass.note ?? '',
-                          (value) => _updatePassField(
-                              appState, pass.index, 'note', value),
+                        // 停止時間
+                        DataCell(
+                          Text(
+                            _formatWeldTime(pass.pauseSec),
+                            style: TextStyle(
+                              color: pass.pauseSec == null
+                                  ? Colors.grey
+                                  : Colors.black87,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-                  ),
+                        // 溶接速度
+                        DataCell(
+                          Text(
+                            pass.speed == null
+                                ? '--'
+                                : '${_trimNum(pass.speed!)} cm/min',
+                            style: TextStyle(
+                              color: pass.speed == null
+                                  ? Colors.grey
+                                  : Colors.black87,
+                            ),
+                          ),
+                        ),
+                        // パス/層
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.passLayer ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'passLayer', value),
+                          ),
+                        ),
+                        // スラグ
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.slag ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'slag', value),
+                          ),
+                        ),
+                        // 備考
+                        DataCell(
+                          _buildEditableCell(
+                            context,
+                            pass.note ?? '',
+                            (value) => _updatePassField(
+                                appState, pass.index, 'note', value),
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList(),
                 ),
               ),
+            ),
           );
         },
       ),
@@ -318,11 +321,11 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('�m�F�E�o��'),
+        title: const Text('値を入力してください'),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            labelText: '�V�����l',
+            labelText: '値を入力してください',
             border: OutlineInputBorder(),
           ),
           autofocus: true,
@@ -334,7 +337,7 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('�L�����Z��'),
+            child: const Text('キャンセル'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -387,11 +390,13 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
     final mm = (total ~/ 60).toString().padLeft(2, '0');
     final ss = (total % 60).toString().padLeft(2, '0');
     return '$mm:$ss';
-    }
+  }
 
   static String _trimNum(double v) {
-    // Keep at most 2 decimals, drop trailing zeros
+    // 小数2桁までにして末尾の0を削除
     final s = v.toStringAsFixed(2);
-    return s.contains('.') ? s.replaceFirst(RegExp(r'\.0+$'), '').replaceFirst(RegExp(r'0+$'), '') : s;
+    return s.contains('.')
+        ? s.replaceFirst(RegExp(r'\.0+$'), '').replaceFirst(RegExp(r'0+$'), '')
+        : s;
   }
 }

@@ -27,7 +27,7 @@ class _MeasurePageState extends State<MeasurePage>
   @override
   void initState() {
     super.initState();
-    // 画面の表示を更新するためのタイカー�E�セチE��ョン時間で描画を更新�E�E
+    // 画面の表示を更新するためのティッカー。1秒ごとに描画を更新する
     _ticker = Ticker(_onTick)..start();
     // 初回のみ：パスが空なら CSV から初期値を読み込む（data/testdata.csv）
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -36,7 +36,7 @@ class _MeasurePageState extends State<MeasurePage>
   }
 
   void _onTick(Duration elapsed) {
-    // セチE��ョンの“見かけ時間”：走行中は (now - start) - totalPause、停止/一時停止中は totalWork
+    // セッションの“見かけ時間”：走行中は (now - start) - totalPause、停止/一時停止中は totalWork
     final app = context.read<AppState>();
     // 秒の表示は四捨五入。表示はカレントパスの実作業時間に合わせる
     final ms = app.globalElapsedAt(DateTime.now()).inMilliseconds;
@@ -60,7 +60,7 @@ class _MeasurePageState extends State<MeasurePage>
     } else if (s.isPaused) {
       app.resumeStopwatch();
     } else {
-      // 停止済み ↁE何もしなぁE��忁E��なら�Eスタートにする�E�E
+      // 停止済みで
     }
   }
 
@@ -114,7 +114,7 @@ class _MeasurePageState extends State<MeasurePage>
               const SizedBox(height: 8),
               const TopGlobalControls(),
               const SizedBox(height: 8),
-              // ──────────────── 上部タイマ�E�E�セチE��ョンに統一�E�E────────────────
+              // ──────────────── 上部タイマーとセッションに統一────────────────
               if (false) Container(
                 padding: const EdgeInsets.all(AppStyles.spacingM),
                 decoration: BoxDecoration(
@@ -129,7 +129,7 @@ class _MeasurePageState extends State<MeasurePage>
                 ),
                 child: Column(
                   children: [
-                    // セチE��ョン時間で表示
+                    // セッション時間で表示
                     Text(
                       _displayTime,
                       style: const TextStyle(
@@ -140,7 +140,7 @@ class _MeasurePageState extends State<MeasurePage>
                     ),
                     const SizedBox(height: AppStyles.spacingM),
 
-                    // 操作�Eタン�E�セチE��ョンAPIに接続！E
+                    // 操作ボタン（セッションAPIに接続！）
                     /* Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -202,9 +202,9 @@ class _MeasurePageState extends State<MeasurePage>
               ),
 
               // ──────────────── Quick input bar ────────────────
-              // const QuickInputBar(), // 一時的に非表示�E�開始温度/終亁E��度/電流E電圧/備老E��E
-              // ──────────────── �E�任意）開発用の直接操作�Eタン ────────────────
-              // 忁E��なければこ�EブロチE��ごと削除してOK
+              // const QuickInputBar(), // 一時的に非表示。開始温度/終了温度/電流/電圧/備考
+              // ──────────────── （任意）開発用の直接操作ボタン ────────────────
+              // 必要なければこのブロックごと削除してOK
               /* Builder(builder: (context) {
                 final app = context.read<AppState>();
                 return Padding(
@@ -241,11 +241,11 @@ class _MeasurePageState extends State<MeasurePage>
               const SizedBox(height: 8),
 
               // ──────────────── Pass card ────────────────
-              // 小さぁE��面で "BOTTOM OVERFLOWED" が�Eる時は、余白を減らすか
-              // PassCard 冁E��をスクロール可能にする対応を後で入れます（今�E一旦こ�Eまま�E�E
+              // 小さな画面で "BOTTOM OVERFLOWED" が出る時は、余白を減らすか
+              // PassCard 自体をスクロール可能にする対応を後で入れます（今は一旦このまま）
               const Expanded(child: PassCard()),
 
-              // ──────────────── HUD�E�開発用の見える化�E�E────────────────
+              // ──────────────── HUDと開発用の見える化────────────────
               // const SessionHud(),
             ],
           );

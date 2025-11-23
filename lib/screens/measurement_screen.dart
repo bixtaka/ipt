@@ -4,6 +4,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'dart:convert' show LineSplitter;
 import 'package:provider/provider.dart';
+import '../factory_db/factory_database.dart';
 import '../services/excel_exporter.dart';
 import '../services/data_storage.dart';
 import '../utils/validators.dart';
@@ -43,7 +44,11 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     '天気',
     '気温'
   ];
+  static const String _projectLabel = '工事名';
+  static const String _productLabel = '製品符号';
   late List<TextEditingController> _infoControllers;
+  int get _projectFieldIndex => infoLabels.indexOf(_projectLabel);
+  int get _productFieldIndex => infoLabels.indexOf(_productLabel);
 
   final List<String> columnTitles = [
     'パス数',
@@ -71,6 +76,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   // セル選択
   int? _selectedRow;
   int? _selectedColumn;
+  int? _selectedProjectId;
 
   // 自動保存関連
   Timer? _autoSaveTimer;
@@ -146,6 +152,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
   }
 
   void _setDefaultValues() {
+    _selectedProjectId = null;
     // 1行目の作業開始（8列目）を00:00に設定
     _controllers[0][8].text = '00:00';
 
@@ -213,6 +220,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         );
       }
     }
+    await _syncProjectSelectionFromControllers();
   }
 
   void _setupInputListeners() {
@@ -226,6 +234,146 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
       for (final controller in row) {
         controller.addListener(_onDataChanged);
       }
+    }
+  }
+
+  Future<void> _syncProjectSelectionFromControllers() async {
+    final index = _projectFieldIndex;
+    if (index < 0) return;
+    final projectName = _infoControllers[index].text.trim();
+    if (projectName.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _selectedProjectId = null;
+        });
+      } else {
+        _selectedProjectId = null;
+      }
+      return;
+    }
+    try {
+      final projects = await FactoryDatabase.instance.getProjects();
+      int? matchedId;
+      for (final project in projects) {
+        final name = project['name']?.toString() ?? '';
+        if (name == projectName) {
+          matchedId = project['id'] as int?;
+          break;
+        }
+      }
+      if (!mounted) {
+        _selectedProjectId = matchedId;
+        return;
+      }
+      setState(() {
+        _selectedProjectId = matchedId;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _selectedProjectId = null;
+      });
+    }
+  }
+
+  Future<bool> _ensureProjectSelectionIsKnown() async {
+    if (_selectedProjectId != null) {
+      return true;
+    }
+    await _syncProjectSelectionFromControllers();
+    return _selectedProjectId != null;
+  }
+
+  Future<void> _openProjectDialog(int fieldIndex) async {
+    try {
+      final projects = await FactoryDatabase.instance.getProjects();
+      if (!mounted) return;
+
+      final selected = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) {
+          return SimpleDialog(
+            title: const Text('工事名を選択'),
+            children: projects.isEmpty
+                ? <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('projects テーブルにデータがありません。'),
+                    ),
+                  ]
+                : projects.map((project) {
+                    final name = project['name']?.toString() ?? '';
+                    return SimpleDialogOption(
+                      onPressed: () => Navigator.of(context).pop(project),
+                      child: Text(name),
+                    );
+                  }).toList(),
+          );
+        },
+      );
+
+      if (selected != null) {
+        setState(() {
+          _selectedProjectId = selected['id'] as int?;
+          _infoControllers[fieldIndex].text =
+              selected['name']?.toString() ?? '';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('工事名の取得に失敗しました: $e')),
+      );
+    }
+  }
+
+  Future<void> _openProductDialog(int fieldIndex) async {
+    if (!await _ensureProjectSelectionIsKnown()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('先に工事名を選択してください。')),
+      );
+      return;
+    }
+
+    try {
+      final products = await FactoryDatabase.instance
+          .getProductsByProject(_selectedProjectId!);
+      if (!mounted) return;
+
+      final selected = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) {
+          return SimpleDialog(
+            title: const Text('製品符号を選択'),
+            children: products.isEmpty
+                ? <Widget>[
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('選択された工事に対応する製品がありません。'),
+                    ),
+                  ]
+                : products.map((product) {
+                    final code = product['product_code']?.toString() ?? '';
+                    return SimpleDialogOption(
+                      onPressed: () => Navigator.of(context).pop(product),
+                      child: Text(code),
+                    );
+                  }).toList(),
+          );
+        },
+      );
+
+      if (selected != null) {
+        setState(() {
+          _infoControllers[fieldIndex].text =
+              selected['product_code']?.toString() ?? '';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('製品符号の取得に失敗しました: $e')),
+      );
     }
   }
 
@@ -660,6 +808,7 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
         setState(() {
           _hasUnsavedChanges = false;
           _validationErrors.clear();
+          _selectedProjectId = null;
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1073,6 +1222,43 @@ class _MeasurementTabbedScreenState extends State<MeasurementTabbedScreen>
     final infoList = ListView.builder(
       itemCount: infoLabels.length,
       itemBuilder: (context, index) {
+        final label = infoLabels[index];
+        if (label == _projectLabel || label == _productLabel) {
+          return ListTile(
+            title: Text(label),
+            subtitle: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _infoControllers[index],
+                    decoration: InputDecoration(
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      errorText: _validationErrors['info_$index'],
+                    ),
+                    onChanged: (_) {
+                      setState(() {
+                        if (label == _projectLabel) {
+                          _selectedProjectId = null;
+                        }
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  tooltip: label == _projectLabel ? '工事名を検索' : '製品符号を検索',
+                  onPressed: label == _projectLabel
+                      ? () => _openProjectDialog(index)
+                      : () => _openProductDialog(index),
+                ),
+              ],
+            ),
+          );
+        }
         // 部材情報（index=4）: 型式選択 + 簡易キーボード入力
         if (index == 4) {
           return MemberSpecTile(

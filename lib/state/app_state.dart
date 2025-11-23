@@ -8,6 +8,7 @@ import '../models/job_settings.dart';
 import '../models/pass_record.dart';
 import '../models/stopwatch_session.dart';
 import '../models/measurement_record.dart';
+import '../services/job_settings_storage.dart';
 
 /// Central application state: settings, passes, and stopwatch sessions.
 class AppState extends ChangeNotifier {
@@ -447,11 +448,19 @@ class AppState extends ChangeNotifier {
   void setProjectName(String? v) {
     _settings = _settings.copyWith(projectName: v);
     notifyListeners();
+    _persistSettings();
+  }
+
+  void setProjectId(int? v) {
+    _settings = _settings.copyWith(projectId: v);
+    notifyListeners();
+    _persistSettings();
   }
 
   void setMeasurementDate(DateTime v) {
     _settings = _settings.copyWith(measurementDate: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setWeldingLengthCm(double? v) {
@@ -461,59 +470,76 @@ class AppState extends ChangeNotifier {
       _recomputeSpeedAndHeatFor(i);
     }
     notifyListeners();
+    _persistSettings();
   }
 
   void setProductCode(String? v) {
     _settings = _settings.copyWith(productCode: v);
     notifyListeners();
+    _persistSettings();
+  }
+
+  void setProductId(int? v) {
+    _settings = _settings.copyWith(productId: v);
+    notifyListeners();
+    _persistSettings();
   }
 
   void setLocation(String? v) {
     _settings = _settings.copyWith(location: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setComponent(String? v) {
     // Map to JobSettings.part
     _settings = _settings.copyWith(part: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setMaterial(String? v) {
     _settings = _settings.copyWith(material: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setGrooveAngle(String? v) {
     _settings = _settings.copyWith(grooveAngle: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setRootGap(String? v) {
     _settings = _settings.copyWith(rootGap: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setWeldingPosition(String? v) {
     // Map to JobSettings.posture
     _settings = _settings.copyWith(posture: v);
     notifyListeners();
+    _persistSettings();
   }
 
   // New: misc conditions
   void setWeather(String? v) {
     _settings = _settings.copyWith(weather: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setAmbientTempC(double? v) {
     _settings = _settings.copyWith(ambientTempC: v);
     notifyListeners();
+    _persistSettings();
   }
 
   void setHumidityPercent(double? v) {
     _settings = _settings.copyWith(humidityPercent: v);
     notifyListeners();
+    _persistSettings();
   }
 
   // ----- Autosave debounce (no-op storage hook) -----
@@ -541,6 +567,19 @@ class AppState extends ChangeNotifier {
       // Also notify to refresh any time-based displays (e.g., global stopwatch HUD)
       notifyListeners();
     });
+    _loadPersistedSettings();
+  }
+
+  Future<void> _loadPersistedSettings() async {
+    final stored = await JobSettingsStorage.load();
+    if (stored != null) {
+      _settings = stored;
+      notifyListeners();
+    }
+  }
+
+  void _persistSettings() {
+    unawaited(JobSettingsStorage.save(_settings));
   }
 
   @override
@@ -580,6 +619,7 @@ class AppState extends ChangeNotifier {
       ..addAll(List<WeldingSession>.generate(_passes.length, (_) => WeldingSession.empty()));
 
     notifyListeners();
+    _persistSettings();
   }
 }
 

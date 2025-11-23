@@ -3,8 +3,12 @@ import 'package:flutter/foundation.dart';
 
 @immutable
 class JobSettings {
+  static const Object _unset = Object();
+
+  final int? projectId;
   final String? projectName;
   final DateTime measurementDate;
+  final int? productId;
   final String? productCode;
   final String? location;
   final String? part; // 部材
@@ -18,8 +22,10 @@ class JobSettings {
   final double? humidityPercent; // 湿度[%]
 
   JobSettings({
+    this.projectId,
     this.projectName,
     DateTime? measurementDate, // const を外す
+    this.productId,
     this.productCode,
     this.location,
     this.part,
@@ -34,40 +40,55 @@ class JobSettings {
   }) : measurementDate = measurementDate ?? DateTime.now();
 
   JobSettings copyWith({
-    String? projectName,
+    Object? projectId = _unset,
+    Object? projectName = _unset,
     DateTime? measurementDate,
-    String? productCode,
-    String? location,
-    String? part,
-    String? material,
-    String? grooveAngle,
-    String? rootGap,
-    String? posture,
-    double? weldingLengthCm,
-    String? weather,
-    double? ambientTempC,
-    double? humidityPercent,
+    Object? productId = _unset,
+    Object? productCode = _unset,
+    Object? location = _unset,
+    Object? part = _unset,
+    Object? material = _unset,
+    Object? grooveAngle = _unset,
+    Object? rootGap = _unset,
+    Object? posture = _unset,
+    Object? weldingLengthCm = _unset,
+    Object? weather = _unset,
+    Object? ambientTempC = _unset,
+    Object? humidityPercent = _unset,
   }) {
     return JobSettings(
-      projectName: projectName ?? this.projectName,
+      projectId: projectId == _unset ? this.projectId : projectId as int?,
+      projectName:
+          projectName == _unset ? this.projectName : projectName as String?,
       measurementDate: measurementDate ?? this.measurementDate,
-      productCode: productCode ?? this.productCode,
-      location: location ?? this.location,
-      part: part ?? this.part,
-      material: material ?? this.material,
-      grooveAngle: grooveAngle ?? this.grooveAngle,
-      rootGap: rootGap ?? this.rootGap,
-      posture: posture ?? this.posture,
-      weldingLengthCm: weldingLengthCm ?? this.weldingLengthCm,
-      weather: weather ?? this.weather,
-      ambientTempC: ambientTempC ?? this.ambientTempC,
-      humidityPercent: humidityPercent ?? this.humidityPercent,
+      productId: productId == _unset ? this.productId : productId as int?,
+      productCode:
+          productCode == _unset ? this.productCode : productCode as String?,
+      location: location == _unset ? this.location : location as String?,
+      part: part == _unset ? this.part : part as String?,
+      material: material == _unset ? this.material : material as String?,
+      grooveAngle:
+          grooveAngle == _unset ? this.grooveAngle : grooveAngle as String?,
+      rootGap: rootGap == _unset ? this.rootGap : rootGap as String?,
+      posture: posture == _unset ? this.posture : posture as String?,
+      weldingLengthCm: weldingLengthCm == _unset
+          ? this.weldingLengthCm
+          : weldingLengthCm as double?,
+      weather: weather == _unset ? this.weather : weather as String?,
+      ambientTempC: ambientTempC == _unset
+          ? this.ambientTempC
+          : ambientTempC as double?,
+      humidityPercent: humidityPercent == _unset
+          ? this.humidityPercent
+          : humidityPercent as double?,
     );
   }
 
   Map<String, dynamic> toJson() => {
+        'projectId': projectId,
         'projectName': projectName,
         'measurementDate': measurementDate.toIso8601String(),
+        'productId': productId,
         'productCode': productCode,
         'location': location,
         'part': part,
@@ -82,10 +103,12 @@ class JobSettings {
       };
 
   factory JobSettings.fromJson(Map<String, dynamic> j) => JobSettings(
+        projectId: (j['projectId'] as num?)?.toInt(),
         projectName: j['projectName'] as String?,
         measurementDate: j['measurementDate'] != null
             ? DateTime.parse(j['measurementDate'] as String)
             : null,
+        productId: (j['productId'] as num?)?.toInt(),
         productCode: j['productCode'] as String?,
         location: j['location'] as String?,
         part: j['part'] as String?,

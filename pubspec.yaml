@@ -31,7 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   sticky_headers: ^0.3.0
-  path_provider: ^2.0.14
+  #path_provider: ^2.0.14
   permission_handler: ^12.0.0+1
   csv: ^6.0.0
   excel: ^4.0.6
@@ -39,8 +39,15 @@ dependencies:
   shared_preferences: ^2.2.3
   share_plus: ^10.0.2
   provider: ^6.1.2
+  pdf: ^3.11.0
+  printing: ^5.13.1
   cupertino_icons: ^1.0.6
   intl: ^0.20.2
+    # 追加: SQLite / パス関連
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.0
+  path_provider: ^2.1.2
+  path: ^1.9.0
 
 
  
@@ -70,6 +77,9 @@ flutter:
     - assets/h_steel_jis.json
     - assets/templates/temp_ipt.xlsx
     - data/testdata.csv
+    # Add Japanese font files here (for PDF glyphs)
+    - assets/fonts/NotoSansJP-Regular.ttf
+    - assets/fonts/NotoSansJP-Bold.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

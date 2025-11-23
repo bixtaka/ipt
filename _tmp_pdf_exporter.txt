@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -99,9 +99,8 @@ Future<Uint8List> _buildPdfBytes({
   final headerRow = measurementData.isNotEmpty
       ? measurementData.first
       : _defaultMeasurementHeader;
-  final dataRows = measurementData.length > 1
-      ? measurementData.sublist(1)
-      : <List<String>>[];
+  final dataRows =
+      measurementData.length > 1 ? measurementData.sublist(1) : <List<String>>[];
 
   const firstPageRows = 40;
   final firstChunk = dataRows.take(firstPageRows).toList();
@@ -169,7 +168,7 @@ pw.Widget _buildFirstPageContent({
     crossAxisAlignment: pw.CrossAxisAlignment.stretch,
     children: [
       pw.Text(
-        '\u5165\u71b1\u30fb\u30d1\u30b9\u9593\u6e29\u5ea6\u7ba1\u7406\u5831\u544a\u66f8',
+        '入熱・パス間温度管理報告書',
         style: titleStyle,
         textAlign: pw.TextAlign.center,
       ),
@@ -206,11 +205,11 @@ pw.Widget _buildTopRow({
   required pw.TextStyle smallStyle,
 }) {
   final tempLine = settings.ambientTempC != null
-      ? '\u6c17\u6e29: ${settings.ambientTempC!.toStringAsFixed(1)}\u2103'
-      : '\u6c17\u6e29: --\u2103';
+      ? '気温: ${settings.ambientTempC!.toStringAsFixed(1)}℃'
+      : '気温: --℃';
   final humidityLine = settings.humidityPercent != null
-      ? '\u6e7f\u5ea6: ${settings.humidityPercent!.toStringAsFixed(0)}%'
-      : '\u6e7f\u5ea6: --%';
+      ? '湿度: ${settings.humidityPercent!.toStringAsFixed(0)}%'
+      : '湿度: --%';
   final weather = '$tempLine  $humidityLine';
 
   return pw.Column(
@@ -235,116 +234,95 @@ pw.Widget _buildTopRow({
           pw.SizedBox(width: 8),
           pw.Expanded(
             flex: 4,
-            child: _buildStackDiagramBlock(
-              diagramBytes: diagramBytes,
-              baseStyle: baseStyle,
-              boldStyle: boldStyle,
-              smallStyle: smallStyle,
+            child: pw.Container(
+              height: 200,
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColors.grey700, width: 0.4),
+              ),
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  pw.Container(
+                    height: 20,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(
+                        bottom:
+                            pw.BorderSide(color: PdfColors.grey500, width: 0.3),
+                      ),
+                      color: PdfColors.grey200,
+                    ),
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Text('積層図', style: boldStyle),
+                  ),
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(8),
+                      child: diagramBytes == null
+                          ? pw.Center(
+                              child: pw.Text(
+                                '積層図を生成できませんでした',
+                                style: smallStyle,
+                                textAlign: pw.TextAlign.center,
+                              ),
+                            )
+                          : pw.Image(
+                              pw.MemoryImage(diagramBytes),
+                              fit: pw.BoxFit.contain,
+                              alignment: pw.Alignment.center,
+                            ),
+                    ),
+                  ),
+                  pw.Container(
+                    height: 20,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border(
+                        top: pw.BorderSide(color: PdfColors.grey500, width: 0.3),
+                      ),
+                      color: PdfColors.grey200,
+                    ),
+                    child: pw.Row(
+                      children: [
+                        pw.Container(
+                          width: 60,
+                          alignment: pw.Alignment.center,
+                          padding:
+                              const pw.EdgeInsets.symmetric(horizontal: 4),
+                          child: pw.Text('積層数', style: boldStyle),
+                        ),
+                        pw.Expanded(
+                          child: pw.Container(
+                            alignment: pw.Alignment.centerLeft,
+                            padding:
+                                const pw.EdgeInsets.symmetric(horizontal: 4),
+                            child: pw.Text('', style: baseStyle),
+                          ),
+                        ),
+                        pw.Container(
+                          width: 70,
+                          alignment: pw.Alignment.center,
+                          padding:
+                              const pw.EdgeInsets.symmetric(horizontal: 4),
+                          child: pw.Text('標準積層数', style: boldStyle),
+                        ),
+                        pw.Expanded(
+                          child: pw.Container(
+                            alignment: pw.Alignment.centerLeft,
+                            padding:
+                                const pw.EdgeInsets.symmetric(horizontal: 4),
+                            child: pw.Text('', style: baseStyle),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
       ),
     ],
-  );
-}
-
-pw.Widget _buildStackDiagramBlock({
-  required Uint8List? diagramBytes,
-  required pw.TextStyle baseStyle,
-  required pw.TextStyle boldStyle,
-  required pw.TextStyle smallStyle,
-}) {
-  const inside = PdfColors.grey500;
-  return pw.Container(
-    height: 200,
-    decoration: pw.BoxDecoration(
-      border: pw.Border.all(color: PdfColors.grey700, width: 0.4),
-    ),
-    child: pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        pw.Container(
-          height: 20,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: inside, width: 0.3),
-            color: PdfColors.grey200,
-          ),
-          alignment: pw.Alignment.centerLeft,
-          child: pw.Text('\u7a4d\u5c64\u56f3', style: boldStyle),
-        ),
-        pw.Expanded(
-          child: pw.Container(
-            padding: const pw.EdgeInsets.all(8),
-            child: diagramBytes == null
-                ? pw.Center(
-                    child: pw.Text(
-                      '\u7a4d\u5c64\u56f3\u3092\u751f\u6210\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f',
-                      style: smallStyle,
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  )
-                : pw.Image(
-                    pw.MemoryImage(diagramBytes),
-                    fit: pw.BoxFit.contain,
-                    alignment: pw.Alignment.center,
-                  ),
-          ),
-        ),
-        pw.Container(
-          height: 20,
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: inside, width: 0.7),
-          ),
-          child: pw.Row(
-            children: [
-              pw.Container(
-                width: 60,
-                alignment: pw.Alignment.center,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey200,
-                  border: pw.Border(
-                    right: pw.BorderSide(color: inside, width: 1.5),
-                  ),
-                ),
-                child: pw.Text('\u7a4d\u5c64\u6570', style: boldStyle),
-              ),
-              pw.Expanded(
-                child: pw.Container(
-                  alignment: pw.Alignment.centerLeft,
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  child: pw.Text('', style: baseStyle),
-                ),
-              ),
-              pw.Container(
-                width: 70,
-                alignment: pw.Alignment.center,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.grey200,
-                  border: pw.Border(
-                    left: pw.BorderSide(color: inside, width: 1.5),
-                    right: pw.BorderSide(color: inside, width: 1.5),
-                  ),
-                ),
-                child:
-                    pw.Text('\u6a19\u6e96\u7a4d\u5c64\u6570', style: boldStyle),
-              ),
-              pw.Expanded(
-                child: pw.Container(
-                  alignment: pw.Alignment.centerLeft,
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4),
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  child: pw.Text('', style: baseStyle),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
   );
 }
 
@@ -379,12 +357,12 @@ pw.Widget _buildInfoBlock({
       );
 
   final twoColumnRows = <List<String>>[
-    ['\u6e2c\u5b9a\u65e5', _fmtDateJa(settings.measurementDate)],
-    ['\u5de5\u4e8b\u540d', settings.projectName ?? ''],
-    ['\u88fd\u54c1\u7b26\u53f7', settings.productCode ?? ''],
-    ['\u4f4d\u7f6e', settings.location ?? ''],
-    ['\u90e8\u6750', settings.part ?? ''],
-    ['\u6750\u8cea', settings.material ?? ''],
+    ['測定日', _fmtDateJa(settings.measurementDate)],
+    ['工事名', settings.projectName ?? ''],
+    ['製品符号', settings.productCode ?? ''],
+    ['位置', settings.location ?? ''],
+    ['部材', settings.part ?? ''],
+    ['材質', settings.material ?? ''],
   ];
 
   final twoColumnTable = pw.Table(
@@ -406,20 +384,10 @@ pw.Widget _buildInfoBlock({
   );
 
   final fourColumnRows = <List<String>>[
+    ['開先角度', settings.grooveAngle ?? '', 'ルート間隔', settings.rootGap ?? ''],
+    ['溶接姿勢', settings.posture ?? '', '溶接技能者', ''],
     [
-      '\u958b\u5148\u89d2\u5ea6',
-      settings.grooveAngle ?? '',
-      '\u30eb\u30fc\u30c8\u9593\u9694',
-      settings.rootGap ?? ''
-    ],
-    [
-      '\u6eb6\u63a5\u59ff\u52e2',
-      settings.posture ?? '',
-      '\u6eb6\u63a5\u6280\u80fd\u8005',
-      ''
-    ],
-    [
-      '\u6eb6\u63a5\u9577(cm)',
+      '溶接長(cm)',
       settings.weldingLengthCm != null ? '${settings.weldingLengthCm}' : '',
       '',
       '',
@@ -475,16 +443,16 @@ pw.Widget _buildMeasurementSection({
   }
 
   const headers = <String>[
-    '\u30d1\u30b9',
-    '\u958b\u59cb\n\u6e29\u5ea6\n(\u2103)',
-    '\u7d42\u4e86\n\u6e29\u5ea6\n(\u2103)',
-    '\u96fb\u6d41\n(A)',
-    '\u96fb\u5727\n(V)',
-    '\u5165\u71b1\n(kJ/cm)',
-    '\u6eb6\u63a5\n\u6642\u9593\n(\u79d2)',
-    '\u505c\u6b62\n\u6642\u9593\n(\u79d2)',
-    '\u6eb6\u63a5\u901f\u5ea6\n(cm/min)',
-    '\u5099\u8003',
+    'パス',
+    '開始\n温度\n(℃)',
+    '終了\n温度\n(℃)',
+    '電流\n(A)',
+    '電圧\n(V)',
+    '入熱\n(kJ/cm)',
+    '溶接\n時間\n(秒)',
+    '停止\n時間\n(秒)',
+    '溶接速度\n(cm/min)',
+    '備考',
   ];
 
   const columnsToKeep = <int>[0, 1, 2, 3, 4, 5, 6, 7, 8, 11];
@@ -577,7 +545,7 @@ pw.Widget _buildNotesAndSignatures({
   return pw.Column(
     crossAxisAlignment: pw.CrossAxisAlignment.stretch,
     children: [
-      pw.Text('\u5099\u8003', style: boldStyle),
+      pw.Text('備考', style: boldStyle),
       pw.SizedBox(height: 4),
       pw.Container(
         height: 60,
@@ -588,9 +556,9 @@ pw.Widget _buildNotesAndSignatures({
       pw.SizedBox(height: 12),
       pw.Row(
         children: [
-          _signatureBox('\u691c\u67fb\u8005', baseStyle, boldStyle),
+          _signatureBox('検査者', baseStyle, boldStyle),
           pw.SizedBox(width: 12),
-          _signatureBox('\u78ba\u8a8d\u8005', baseStyle, boldStyle),
+          _signatureBox('確認者', baseStyle, boldStyle),
         ],
       ),
     ],
@@ -676,18 +644,19 @@ String _fmtDate(DateTime date) {
 }
 
 String _fmtDateJa(DateTime date) {
-  return '${date.year}\u5e74${date.month}\u6708${date.day}\u65e5';
+  return '${date.year}年${date.month}月${date.day}日';
 }
 
 const List<String> _defaultMeasurementHeader = <String>[
-  '\u30d1\u30b9',
-  '\u958b\u59cb\u6e29\u5ea6',
-  '\u7d42\u4e86\u6e29\u5ea6',
-  '\u96fb\u6d41',
-  '\u96fb\u5727',
-  '\u5165\u71b1(kJ/cm)',
-  '\u6eb6\u63a5\u6642\u9593',
-  '\u505c\u6b62\u6642\u9593',
-  '\u6eb6\u63a5\u901f\u5ea6(cm/min)',
-  '\u5099\u8003',
+  'パス',
+  '開始温度',
+  '終了温度',
+  '電流',
+  '電圧',
+  '入熱(kJ/cm)',
+  '溶接時間',
+  '停止時間',
+  '溶接速度(cm/min)',
+  '備考',
 ];
+

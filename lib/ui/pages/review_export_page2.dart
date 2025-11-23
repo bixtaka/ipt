@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../state/app_state.dart';
 import '../../services/excel_exporter.dart';
+import '../../services/pdf_exporter.dart';
 import '../../services/measurement_repository.dart';
 import 'history_page.dart';
 
@@ -39,7 +40,6 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
       }
     } catch (e) {
       if (!mounted) return;
-      // Keep a brief snackbar and a detailed dialog
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Excel出力に失敗しました: $e'),
@@ -58,6 +58,81 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
               child: const Text('閉じる'),
             ),
           ],
+        ),
+      );
+    }
+  }
+
+  // ===== PDF Export =====
+  Future<void> _exportToPdf() async {
+    try {
+      final app = context.read<AppState>();
+      final measurementData = _buildMeasurementData(app);
+      await exportPdfReport(
+        settings: app.settings,
+        passes: app.passes,
+        measurementData: measurementData,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDFを保存しました'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF出力に失敗しました: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 6),
+        ),
+      );
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('PDF出力エラー'),
+          content: SingleChildScrollView(child: Text('$e')),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('閉じる'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Future<void> _exportToPdfLocal() async {
+    try {
+      final app = context.read<AppState>();
+      final measurementData = _buildMeasurementData(app);
+      // Prefer public Download on Android; fallback handled inside exporter.
+      const path = '/sdcard/Download/ipt_report.pdf';
+      final savedPath = await exportPdfReportToFile(
+        settings: app.settings,
+        passes: app.passes,
+        measurementData: measurementData,
+        filePath: path,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDFを保存しました: $savedPath'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('PDF保存に失敗しました: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 6),
         ),
       );
     }
@@ -114,18 +189,19 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
 
     final lengthCm = app.settings.weldingLengthCm;
     for (final p in app.passes) {
-      // Prefer segment-based weld time if present; else use stored value
       final double? workSec = p.segments.isNotEmpty
           ? p.weldingTotal.inSeconds.toDouble()
           : p.weldTimeSec;
-      final double? speed = (lengthCm != null && lengthCm > 0 && workSec != null && workSec > 0)
-          ? (lengthCm / (workSec / 60.0))
-          : p.speed;
+      final double? speed =
+          (lengthCm != null && lengthCm > 0 && workSec != null && workSec > 0)
+              ? (lengthCm / (workSec / 60.0))
+              : p.speed;
       final int? amps = p.amps;
       final double? volts = p.volts?.toDouble();
-      final double? heat = (speed != null && speed > 0 && amps != null && volts != null)
-          ? ((amps * volts * 60) / (speed * 1000))
-          : p.heatInput;
+      final double? heat =
+          (speed != null && speed > 0 && amps != null && volts != null)
+              ? ((amps * volts * 60) / (speed * 1000))
+              : p.heatInput;
 
       rows.add(<String>[
         p.index.toString(),
@@ -175,7 +251,6 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
                   );
                   await _repo.update(updated);
                 } else {
-                  // Fallback: add as new if not found
                   await _repo.add(rec);
                 }
               }
@@ -218,6 +293,16 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
             onPressed: _exportToExcel,
             icon: const Icon(Icons.table_chart),
             tooltip: 'Excel出力',
+          ),
+          IconButton(
+            onPressed: _exportToPdfLocal,
+            icon: const Icon(Icons.download),
+            tooltip: 'PDF保存(Download)',
+          ),
+          IconButton(
+            onPressed: _exportToPdf,
+            icon: const Icon(Icons.picture_as_pdf),
+            tooltip: 'PDF出力',
           ),
         ],
       ),
@@ -291,24 +376,28 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
                       DataCell(_buildEditableCell(
                         context,
                         pass.tStart?.toString() ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'tStart', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'tStart', v),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.tEnd?.toString() ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'tEnd', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'tEnd', v),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.amps?.toString() ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'amps', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'amps', v),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.volts == null
                             ? ''
                             : pass.volts!.toDouble().toStringAsFixed(1),
-                        (v) => _updatePassField(appState, pass.index, 'volts', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'volts', v),
                       )),
                       DataCell(Text(
                         pass.heatInput == null
@@ -341,25 +430,27 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
                             ? '--'
                             : '${_trimNum(pass.speed!)} cm/min',
                         style: TextStyle(
-                          color: pass.speed == null
-                              ? Colors.grey
-                              : Colors.black87,
+                          color:
+                              pass.speed == null ? Colors.grey : Colors.black87,
                         ),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.passLayer ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'passLayer', v),
+                        (v) => _updatePassField(
+                            appState, pass.index, 'passLayer', v),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.slag ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'slag', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'slag', v),
                       )),
                       DataCell(_buildEditableCell(
                         context,
                         pass.note ?? '',
-                        (v) => _updatePassField(appState, pass.index, 'note', v),
+                        (v) =>
+                            _updatePassField(appState, pass.index, 'note', v),
                       )),
                     ]);
                   }).toList(),
@@ -475,7 +566,6 @@ class _ReviewExportPageState extends State<ReviewExportPage> {
   }
 
   static String _trimNum(double v) {
-    // Keep at most 2 decimals, drop trailing zeros
     final s = v.toStringAsFixed(2);
     if (!s.contains('.')) return s;
     return s
